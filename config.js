@@ -7,7 +7,7 @@ config.debug = false;
 
 // HTTPS enable
 config.https = {
-  enabled: true,
+  enabled: false,
   cert_file: 'certs/idm-2018-cert.pem',
   key_file: 'certs/idm-2018-key.pem',
   ca_certs: [],
@@ -91,7 +91,7 @@ config.usage_control = {
 // Database info
 config.database = {
   host: 'localhost',
-  password: 'secrets',
+  password: '123456/AP',
   username: 'root',
   database: 'idm',
   dialect: 'mysql',
@@ -132,8 +132,13 @@ config.site = {
 config.eidas = {
   enabled: true,
   gateway_host: 'localhost',
-  node_host: 'https://se-eidas.redsara.es/EidasNode/ServiceProvider',
+  node_host: 'http://localhost:8088/',
   metadata_expiration: 60 * 60 * 24 * 365 // One year
+};
+
+// Config SPID Authentication
+config.spid = {
+  enabled: true
 };
 
 // Enables the possibility of adding identity attributes in users' profile
