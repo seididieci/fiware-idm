@@ -163,6 +163,15 @@ app.use(function (req, res, next) {
   next();
 });
 
+// Check modules and install it...
+const moduleLoader = require('./lib/moduleLoader');
+const mods = moduleLoader.loadModules(path.resolve('./modules'));
+for (const mod in mods) {
+  if (mods.hasOwnProperty(mod)) {
+    mods[mod].install(app, config);
+  }
+}
+
 // Force HTTPS connection to web server
 if (config.https.enabled) {
   app.set('forceSSLOptions', {
