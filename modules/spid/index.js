@@ -6,6 +6,12 @@ const debug = require('debug')('spid:module');
 exports.install = function (app, config) {
   if (config.spid.enabled) {
     app.use((req, res, next) => {
+      // Se devo saltare lo spid
+      if (req.session.skipSPID) {
+        next();
+        return;
+      }
+
       var regex = /\/idm\/applications\/(.*)\/step\/avatar/gim;
       var groups = regex.exec(req.path);
 
@@ -34,4 +40,21 @@ exports.install = function (app, config) {
     // Crea la tabella o la aggiorna
     spid_credentials.sync({ alter: true });
   }
+};
+
+// Method to see users permissions to do some actions
+// - 1 Get and assign all internal application roles
+// - 2 Manage the application
+// - 3 Manage roles
+// - 4 Manage authorizations
+// - 5 Get and assign all public application roles
+// - 6 Get and assign only public owned roles
+exports.check_user_action = function (application, path, method, permissions) {
+  if (path.includes('step/spid') && method === 'POST') {
+    if (permissions.includes('2')) {
+      return true;
+    }
+  }
+
+  return false;
 };

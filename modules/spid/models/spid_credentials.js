@@ -9,19 +9,16 @@ module.exports = function (sequelize, DataTypes) {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true
       },
-      // entity_id: {
-      //   type:
-      //     DataTypes.STRING(255) +
-      //     (sequelize.getDialect() === 'mysql' ? ' CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci' : ''),
-      //   validate: { notEmpty: { msg: 'entity_id' } }
-      // },
-      // assert_endpoint: {
-      //   type:
-      //     DataTypes.STRING(255) +
-      //     (sequelize.getDialect() === 'mysql' ? ' CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci' : ''),
-      //   validate: { notEmpty: { msg: 'assert_endpoint' } }
-      // },
-      auth_context: {
+      application_id: {
+        type: DataTypes.UUID,
+      },
+      auth_context_comparison: {
+        type:
+          DataTypes.STRING(50) +
+          (sequelize.getDialect() === 'mysql' ? ' CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci' : ''),
+        validate: { notEmpty: { msg: 'assert_endpoint' } }
+      },
+      auth_context_cref: {
         type:
           DataTypes.STRING(255) +
           (sequelize.getDialect() === 'mysql' ? ' CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci' : ''),

@@ -3,7 +3,11 @@ const debug = require('debug')('idm:spid_controller');
 const { ServiceProvider } = require('../lib/spid.js');
 const image = require('../../../lib/image.js');
 const models = require('../../../models/models.js');
+const spidModels = require('../models/models.js');
 const path = require('path');
+const exec = require('child_process').exec;
+
+const requests_app_ids = {};
 
 // TODO: Queste vanno rese configurabili
 const options = {
@@ -80,6 +84,9 @@ exports.spid_login = async (req, res, nest) => {
   try {
     const sp = new ServiceProvider(options);
     const auth_req = sp.create_authn_request();
+
+    requests_app_ids[auth_req.id] = req.application.id;
+
     const url = await sp.getRequestUrl(auth_req.xml);
 
     // Redirect to SPID IdP
@@ -105,6 +112,9 @@ exports.validateResponse = async (req, res, next) => {
     // Dovrebbe essere pari all'id della richiesta
     // TODO: Implementare il controllo sul responseto
     const response_to = respData.response_header.in_response_to;
+
+    if (!requests_app_ids[response_to]) {
+    }
 
     const spid_profile = {};
 
@@ -153,13 +163,12 @@ exports.validateResponse = async (req, res, next) => {
     res.redirect(path);
   } catch (err) {
     debug(err);
-
-    req.next(err);
+    next(err);
   }
 };
 
 // GET: /idm/applications/:id/step/spid
-exports.application_step_spid = (req, res, next) => {
+exports.application_step_spid = (req, res) => {
   res.render('../modules/spid/views/step_spid.ejs', {
     application: req.application,
     spid_credentials: [],
@@ -169,9 +178,31 @@ exports.application_step_spid = (req, res, next) => {
 };
 
 // POST: /idm/applications/:id/step/spid
-exports.application_save_spid = (req, res, next) => {
+exports.application_save_spid = async (req, res) => {
+  const credentials = req.body.spid_credentials;
 
-  res.send(req.spid_credentials);
+  const newValue = spidModels.spid_credentials.build();0
+  newValue.application_id = req.application.id;
+  newValue.auth_context_comparison = credentials.comparison;
+  newValue.auth_context_cref = credentials.level;
+  newValue.organization_name = credentials.organization_name;
+  newValue.organization_display_name = credentials.organization_display_name;
+  newValue.organization_url = credentials.organization_url;
+  newValue.attributes_list = {
+    name: credentials.attributes_name,
+    values: credentials.attributes_list.split(', ')
+  };
+
+  try {
+    await newValue.validate();
+    await newValue.save();
+    await generate_app_certificates(req.application.id, newValue);
+    req.session.skipSPID = true;
+    return res.redirect('/idm/applications/' + req.application.id + '/step/avatar');
+  } catch (err) {
+    debug(err);
+    next(err);
+  }
 };
 
 async function create_user(name_id, spid_profile) {
@@ -231,5 +262,47 @@ async function create_user(name_id, spid_profile) {
 
   return user.save({
     fields: ['extra', 'email', 'image']
+  });
+}
+
+// Function to generate SAML certifiactes
+function generate_app_certificates(app_id, spid_credentials) {
+  debug('--> generate_app_certificates');
+
+  return new Promise((resolve, reject) => {
+    // Create certs folder if nor exists
+    if (!fs.existsSync(path.resolve('certs/applications/spid'))) {
+      fs.mkdirSync(path.resolve('certs/applications/spid'), { recursive: true });
+    }
+
+    const key_name = 'certs/applications/spid/' + app_id + '-key.pem';
+    const csr_name = 'certs/applications/spid/' + app_id + '-csr.pem';
+    const cert_name = 'certs/applications/spid/' + app_id + '-cert.pem';
+
+    const key = 'openssl genrsa -out ' + key_name + ' 2048';
+    const csr =
+      'openssl req -new -sha256 -key ' +
+      key_name +
+      ' -out ' +
+      csr_name +
+      ' -subj "/C=ES/ST=Madrid/L=Madrid/' +
+      'O=' +
+      spid_credentials.organization_name +
+      '/OU=' +
+      spid_credentials.organization_display_name +
+      '/CN=' +
+      spid_credentials.organization_url.replace(/(^\w+:|^)\/\//, '') +
+      '"';
+
+    const cert = 'openssl x509 -days 1095 -req -in ' + csr_name + ' -signkey ' + key_name + ' -out ' + cert_name;
+
+    const create_certificates = key + ' && ' + csr + ' && ' + cert;
+    exec(create_certificates, function (error) {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
   });
 }
