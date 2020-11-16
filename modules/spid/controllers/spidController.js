@@ -6,91 +6,53 @@ const models = require('../../../models/models.js');
 const spidModels = require('../models/models.js');
 const path = require('path');
 const exec = require('child_process').exec;
+const config_service = require('../../../lib/configService.js');
+const config = config_service.get_config();
 
 const requests_app_ids = {};
 
-// TODO: Queste vanno rese configurabili
-const options = {
-  signatureAlgorithm: 'sha512',
-  sp: {
-    entity_id: 'https://localhost/idm/applications/9e5d1f6e-5000-4125-9f50-54d0aaec2996/saml2/metadata',
-    private_key: fs.readFileSync('./certs/applications/9e5d1f6e-5000-4125-9f50-54d0aaec2996-key.pem', 'utf-8'),
-    certificate: fs.readFileSync('./certs/applications/9e5d1f6e-5000-4125-9f50-54d0aaec2996-cert.pem', 'utf-8'),
-    assert_endpoint: 'http://localhost:3000/spid/acs',
-    // alt_private_keys: [],
-    // alt_certs: [],
-    force_authn: false,
-    auth_context: {
-      comparison: 'exact',
-      class_refs: ['https://www.spid.gov.it/SpidL1']
-    },
-    nameid_format: 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient',
-    sign_get_request: true,
-    allow_unencrypted_assertion: true,
-    // Custom
-    organization: {
-      name: 'TeamDev',
-      displayName: 'TeamDev s.r.l.',
-      URL: 'https://teamdev.it'
-    },
-    attributeConsumingServiceIndex: 1,
-    attributes: {
-      name: 'Required attributes',
-      values: ['fiscalNumber', 'name', 'familyName', 'email']
-    }
-  },
-  idp: {
-    sso_login_url: 'http://localhost:8088/sso',
-    sso_logout_url: 'http://localhost:8088/slo',
-    certificates: [
-      `MIIC+zCCAeOgAwIBAgIUeYWcwo2OxQ7mdjwhb3FsSylBs/EwDQYJKoZIhvcNAQEL
-      BQAwDTELMAkGA1UEBhMCSVQwHhcNMjAxMDI4MTEzNjIxWhcNMjAxMTI3MTEzNjIx
-      WjANMQswCQYDVQQGEwJJVDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
-      ANIz6ELcW42s8tit/+5XiZn4eknpywvPPx1PoJYavZFdL8limDbIOTPwkbEqXJ0g
-      nMOmTkF+5RsS5jQAVuendWoZcW2HDD1bT8RZME5GdpxMDvljtfQS709BdAlLuzE5
-      W7PFGhKr8pgzwhhd4W6DUb1UqUsC/egWkXCw7khgdwsUX/vHK5WeIinGyD10B+Kt
-      9I+TKUuyvhdldzdArqdQKFMK2PYLJLHiNU0R5kqiM/joBZYwjjNz+4kRFoc/CS7A
-      2binzz6QVYZ+F+GXSGeUnoBxIchWghrmVnLckIBGq2GThoHoLzj0vSq2x2OYMS7b
-      9Duumathd0QTDOpqmXxguRkCAwEAAaNTMFEwHQYDVR0OBBYEFHNd9zKL4d+yM+we
-      yqIVag9T6xS9MB8GA1UdIwQYMBaAFHNd9zKL4d+yM+weyqIVag9T6xS9MA8GA1Ud
-      EwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAM5g1Cdj1MfZDAv447ROmAfw
-      ts9Jx5qiE4vwP8mGBvumkHJNbeDLtWA5HQtmxfOms0BPu0LfVLG0Ci9V/zErSkg/
-      TwazpgPMy9NBEVXgTnCwX/aaaKqs7DikA3f7pJOWfs1Mh/F6GNFR9TKXq5HYc2N0
-      kEbhpC3iWdwCxqrpa7lDUvJ/GCRPT8j65a6ZbfYloemjd6QflCRN9EvjFMLYd7oJ
-      T9kLq09OvFeyuzcE0HpZIu++D4zOmjsNdcaktmXuVZEWTRQOcmX24V9AhQY46rju
-      31q/xjpkyW8r0CmAGdBAVY2ILKXtqe9LMlvqOKhzkU8ct9DwYLKH30lcFhhaQps=`
-    ],
-    force_authn: false,
-    sign_get_request: true,
-    allow_unencrypted_assertion: true,
-    entity_id: 'http://localhost:8088'
-  }
-};
+const exampleAppId = '3ece1d94-348e-475c-b131-16987ebb0a35';
 
 // const sp_states = {};
 
-exports.get_metadata = (req, res, nest) => {
+exports.get_metadata = async (req, res, nest) => {
   debug('--> spid_metadata');
+  const credentials = await spidModels.spid_credentials.findOne({
+    where: { application_id: exampleAppId }
+  });
 
-  const sp = new ServiceProvider(options);
+  const sp_options = get_sp_options(credentials);
+
+  const sp = new ServiceProvider(sp_options);
   const metadata = sp.generateMetadata();
 
   res.send(metadata);
+    
 };
 
-exports.spid_login = async (req, res, nest) => {
+exports.spid_login = async (req, res, next) => {
   debug('--> spid_login');
+  //FIXME: se popolata la form di inserimento credenziali, il dato arriva a keyrock (ma non dovrebbe)
+  const credentials = await spidModels.spid_credentials.findOne({
+    where: { application_id: req.query.client_id }
+  });
 
   try {
-    const sp = new ServiceProvider(options);
-    const auth_req = sp.create_authn_request();
+    if (credentials) {
+      //crete service Provider
+      const sp_options = get_sp_options(credentials);
 
-    requests_app_ids[auth_req.id] = req.application.id;
+      const sp = new ServiceProvider(sp_options);
+      const auth_req = sp.create_authn_request();
+      const url = await sp.getRequestUrl(auth_req.xml);
 
-    const url = await sp.getRequestUrl(auth_req.xml);
+      requests_app_ids[auth_req.id] = credentials.application_id;
 
-    // Redirect to SPID IdP
-    res.redirect(302, url);
+      // Redirect to SPID IdP
+      res.redirect(302, url);
+    } else {
+      next(); 
+    }
   } catch (err) {
     debug(err);
     req.next(err);
@@ -100,8 +62,14 @@ exports.spid_login = async (req, res, nest) => {
 exports.validateResponse = async (req, res, next) => {
   debug('--> spid_response');
 
+  const credentials = await spidModels.spid_credentials.findOne({
+    where: { application_id: exampleAppId }
+  });
+
   try {
-    const sp = new ServiceProvider(options);
+    const sp_options = get_sp_options(credentials);
+
+    const sp = new ServiceProvider(sp_options);
     const respData = await sp.validateResponse(req.body);
 
     // id transiente dell'uetnte (cambia ad ogni login)
@@ -141,24 +109,25 @@ exports.validateResponse = async (req, res, next) => {
       oauth_sign_in: true
     };
 
+    //FIXME: verifica questa gestione dello state come viene fatto per eidas
     // const state = sp_states[response_to] ? sp_states[response_to] : 'xyz';
 
     // const redirect_uri = sp_redirect_uris[response_to]
     //   ? sp_redirect_uris[response_to]
     //   : req.application.redirect_uri.split(',')[0];
 
+    const application = await models.oauth_client.findOne({
+      where: { id: credentials.application_id }
+    });
+  
+
     //TODO: Vanno recuperati i dati dell'applicazione che ha fatto la richiesta..
     const path =
-      '/oauth2/authorize?' +
-      'response_type=code&' +
-      'client_id=' +
-      '9e5d1f6e-5000-4125-9f50-54d0aaec2996' +
-      '&' +
-      'state=' +
-      'xyz' +
-      '&' +
-      'redirect_uri=' +
-      'http://localhost:8080/auth_callback.html';
+      '/oauth2/authorize' +
+      `?response_type=code` +
+      `&client_id=${credentials.application_id}` +
+      '&state=xyz' + 
+      `&redirect_uri=${application.redirect_uri}`;
 
     res.redirect(path);
   } catch (err) {
@@ -181,7 +150,8 @@ exports.application_step_spid = (req, res) => {
 exports.application_save_spid = async (req, res) => {
   const credentials = req.body.spid_credentials;
 
-  const newValue = spidModels.spid_credentials.build();0
+  const newValue = spidModels.spid_credentials.build();
+  0;
   newValue.application_id = req.application.id;
   newValue.auth_context_comparison = credentials.comparison;
   newValue.auth_context_cref = credentials.level;
@@ -195,6 +165,8 @@ exports.application_save_spid = async (req, res) => {
 
   try {
     await newValue.validate();
+
+    //FIXME: controlla se è gia stata creata l'entità mediante applicationId, altrimenti non crearla di nuovo
     await newValue.save();
     await generate_app_certificates(req.application.id, newValue);
     req.session.skipSPID = true;
@@ -204,6 +176,66 @@ exports.application_save_spid = async (req, res) => {
     next(err);
   }
 };
+
+function get_sp_options(credentials) {
+  return {
+    signatureAlgorithm: 'sha512',
+    sp: {
+      entity_id: `${config.spid.gateway_host}/spid/metadata`,
+      private_key: fs.readFileSync(`./certs/applications/spid/${credentials.application_id}-key.pem`, 'utf-8'),
+      certificate: fs.readFileSync(`./certs/applications/spid/${credentials.application_id}-cert.pem`, 'utf-8'),
+      assert_endpoint: `${config.spid.gateway_host}/spid/acs`,
+
+      // alt_private_keys: [],
+      // alt_certs: [],
+      force_authn: false,
+      auth_context: {
+        comparison: credentials.auth_context_comparison,
+        class_refs: [credentials.auth_context_cref]
+      },
+      nameid_format: 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient',
+      sign_get_request: true,
+      allow_unencrypted_assertion: true,
+      // Custom
+      organization: {
+        name: credentials.organization_name,
+        displayName: credentials.displayName,
+        URL: credentials.organization_url
+      },
+      attributeConsumingServiceIndex: 1,
+      attributes: {
+        name: credentials.attributes_list.name,
+        values: credentials.attributes_list.values
+      }
+    },
+    idp: { //TODO: cambia con i security provider
+      sso_login_url: 'http://localhost:8088/sso',
+      sso_logout_url: 'http://localhost:8088/slo',
+      certificates: [
+        `MIIC+zCCAeOgAwIBAgIUeYWcwo2OxQ7mdjwhb3FsSylBs/EwDQYJKoZIhvcNAQEL
+              BQAwDTELMAkGA1UEBhMCSVQwHhcNMjAxMDI4MTEzNjIxWhcNMjAxMTI3MTEzNjIx
+              WjANMQswCQYDVQQGEwJJVDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+              ANIz6ELcW42s8tit/+5XiZn4eknpywvPPx1PoJYavZFdL8limDbIOTPwkbEqXJ0g
+              nMOmTkF+5RsS5jQAVuendWoZcW2HDD1bT8RZME5GdpxMDvljtfQS709BdAlLuzE5
+              W7PFGhKr8pgzwhhd4W6DUb1UqUsC/egWkXCw7khgdwsUX/vHK5WeIinGyD10B+Kt
+              9I+TKUuyvhdldzdArqdQKFMK2PYLJLHiNU0R5kqiM/joBZYwjjNz+4kRFoc/CS7A
+              2binzz6QVYZ+F+GXSGeUnoBxIchWghrmVnLckIBGq2GThoHoLzj0vSq2x2OYMS7b
+              9Duumathd0QTDOpqmXxguRkCAwEAAaNTMFEwHQYDVR0OBBYEFHNd9zKL4d+yM+we
+              yqIVag9T6xS9MB8GA1UdIwQYMBaAFHNd9zKL4d+yM+weyqIVag9T6xS9MA8GA1Ud
+              EwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAM5g1Cdj1MfZDAv447ROmAfw
+              ts9Jx5qiE4vwP8mGBvumkHJNbeDLtWA5HQtmxfOms0BPu0LfVLG0Ci9V/zErSkg/
+              TwazpgPMy9NBEVXgTnCwX/aaaKqs7DikA3f7pJOWfs1Mh/F6GNFR9TKXq5HYc2N0
+              kEbhpC3iWdwCxqrpa7lDUvJ/GCRPT8j65a6ZbfYloemjd6QflCRN9EvjFMLYd7oJ
+              T9kLq09OvFeyuzcE0HpZIu++D4zOmjsNdcaktmXuVZEWTRQOcmX24V9AhQY46rju
+              31q/xjpkyW8r0CmAGdBAVY2ILKXtqe9LMlvqOKhzkU8ct9DwYLKH30lcFhhaQps=`
+      ],
+      force_authn: false,
+      sign_get_request: true,
+      allow_unencrypted_assertion: true,
+      entity_id: config.spid.node_host
+    }
+  };
+}
 
 async function create_user(name_id, spid_profile) {
   let image_name = 'default';

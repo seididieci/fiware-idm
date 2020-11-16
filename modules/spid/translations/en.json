@@ -1,5 +1,8 @@
 {
   "spid": {
+    "login":{
+      "spid_loginin_btn": "SPID Login"
+    },
     "organization": {
       "title": "Organization infos",
       "name": "Name",

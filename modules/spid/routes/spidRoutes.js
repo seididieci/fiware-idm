@@ -4,7 +4,7 @@ const debug = require('debug')('idm:saml_model');
 const spid_controller = require('../controllers/spidController');
 
 // Routes for SPID
-router.get('/login', spid_controller.spid_login);
+router.post('/login', spid_controller.spid_login);
 
 router.post('/acs', spid_controller.validateResponse);
 

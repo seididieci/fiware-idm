@@ -53,6 +53,10 @@
         </label>
       </div>
       <button type="submit" class="btn btn-primary pull-right"><%=translation.oauth.login.loginin_btn%></button>
+      <% if (spid_auth.enabled) { -%>
+          <button id="saml2_eidas_button" type="submit"  class="btn btn-primary pull-right second_submit_button" 
+            formaction="/spid/login?response_type=<%= application.response_type %>&client_id=<%= application.id %>&state=<%= application.state %>&redirect_uri=<%= application.redirect_uri %>"><%=spid_auth.login_button_label%></button>
+      <% } -%>
       <% if (saml_request.enabled) { -%>
         <button id="saml2_eidas_button" type="submit"  class="btn btn-primary pull-right second_submit_button" formaction="/saml2/login?response_type=<%= application.response_type %>&client_id=<%= application.id %>&state=<%= application.state %>&redirect_uri=<%= application.redirect_uri %>" ><%=translation.oauth.login.eidas_loginin_btn%></button>
       <% } -%>

@@ -138,7 +138,9 @@ config.eidas = {
 
 // Config SPID Authentication
 config.spid = {
-  enabled: true
+  enabled: true,
+  gateway_host: 'http://localhost:3000',
+  node_host: 'http://localhost:8088',
 };
 
 // Enables the possibility of adding identity attributes in users' profile

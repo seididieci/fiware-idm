@@ -39,6 +39,18 @@ exports.install = function (app, config) {
 
     // Crea la tabella o la aggiorna
     spid_credentials.sync({ alter: true });
+
+
+    app.use('/oauth2/authorize', function(req, res, next) {
+      res.locals.spid_auth = {
+        // xml = req.saml_auth_request.xml,
+        // postLocationUrl = req.saml_auth_request.postLocationUrl,
+        // redirectLocationUrl = req.saml_auth_request.redirectLocationUrl,
+        login_button_label:'SPID Login',
+        enabled: true
+      };
+      next();
+  });
   }
 };
 
