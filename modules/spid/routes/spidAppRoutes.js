@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const debug = require('debug')('idm:saml_model');
+// const debug = require('debug')('idm:saml_model');
 const spid_controller = require('../controllers/spidController');
 const index_controller = require('../../../controllers/web/index');
 const csrf = require('csurf');

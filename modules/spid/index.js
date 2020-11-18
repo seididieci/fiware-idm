@@ -1,6 +1,6 @@
 const { spid_credentials } = require('./models/models.js');
-const spidRoute = require('./routes/spidRoutes.js');
-const spidAppRoute = require('./routes/spidAppRoutes.js');
+const spid_route = require('./routes/spidRoutes.js');
+const spid_app_route = require('./routes/spidAppRoutes.js');
 const debug = require('debug')('spid:module');
 
 exports.install = function (app, config) {
@@ -12,12 +12,12 @@ exports.install = function (app, config) {
         return;
       }
 
-      var regex = /\/idm\/applications\/(.*)\/step\/avatar/gim;
-      var groups = regex.exec(req.path);
+      const regex = /\/idm\/applications\/(.*)\/step\/avatar/gim;
+      const groups = regex.exec(req.path);
 
       if (groups && groups.length > 1) {
         // Qui mi devo gestire la configurazione dello SPID
-        const appId = groups[1];
+        const app_id = groups[1];
 
         // Sto salvando l'avatar che è l'ultimo dei moicani e quindi ho già fatto lo step SPID
         if (req.method === 'POST') {
@@ -27,15 +27,15 @@ exports.install = function (app, config) {
 
         debug('Found step avatar in application', groups[1]);
 
-        res.redirect('/idm/applications/' + appId + '/step/spid');
+        res.redirect('/idm/applications/' + app_id + '/step/spid');
         return;
       }
       next();
     });
 
-    app.use('/spid', spidRoute);
+    app.use('/spid', spid_route);
 
-    app.use('/idm/applications', spidAppRoute);
+    app.use('/idm/applications', spid_app_route);
 
     // Crea la tabella o la aggiorna
     spid_credentials.sync({ alter: true });

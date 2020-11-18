@@ -71,7 +71,7 @@ app.use(
 app.use(helmet.ieNoOpen());
 app.use(helmet.noSniff());
 
-//options.permittedPolicies is a string that must be "none",
+// options.permittedPolicies is a string that must be "none",
 //"master-only", "by-content-type", or "all". It defaults to "none".
 app.use(
   helmet.permittedCrossDomainPolicies({
@@ -164,10 +164,10 @@ app.use(function (req, res, next) {
 });
 
 // Check modules and install it...
-const moduleLoader = require('./lib/moduleLoader');
-const mods = moduleLoader.loadModules(path.resolve('./modules'));
+const module_loader = require('./lib/moduleLoader');
+const mods = module_loader.loadModules(path.resolve('./modules'));
 for (const mod in mods) {
-  if (mods.hasOwnProperty(mod)) {
+  if (Object.prototype.hasOwnProperty.call(mods, mod)) {
     mods[mod].install(app, config);
   }
 }
