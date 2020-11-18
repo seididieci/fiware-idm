@@ -6,13 +6,13 @@ const spid_controller = require('../controllers/spidController');
 // Routes for SPID
 router.post('/login', spid_controller.spid_login);
 
-router.post('/acs', spid_controller.validateResponse);
+router.post('/:clientId/acs', spid_controller.validateResponse);
 
 // Create xml metadata
-router.get("/metadata", spid_controller.get_metadata);
+router.get('/:clientId/metadata', spid_controller.get_metadata);
 
 // catch 404 and forward to error handler
-router.use(function(req, res) {
+router.use(function (req, res) {
   const err = new Error('Path not Found');
 
   err.status = 404;
@@ -26,7 +26,7 @@ router.use(function(req, res) {
 
 // Error handler
 /* eslint-disable no-unused-vars */
-router.use(function(err, req, res, next) {
+router.use(function (err, req, res, next) {
   /* eslint-enable no-unused-vars */
   debug(err);
 

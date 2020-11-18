@@ -1,38 +1,39 @@
 const fs = require('fs');
 const debug = require('debug')('idm:spid_controller');
+// eslint-disable-next-line snakecase/snakecase
 const { ServiceProvider } = require('../lib/spid.js');
 const image = require('../../../lib/image.js');
 const models = require('../../../models/models.js');
+// eslint-disable-next-line snakecase/snakecase
 const spidModels = require('../models/models.js');
 const path = require('path');
 const exec = require('child_process').exec;
 const config_service = require('../../../lib/configService.js');
 const config = config_service.get_config();
+const gravatar = require('gravatar');
 
-const requests_app_ids = {};
+// Keep request in-memory
+// TODO: This should be moved in the db if we have to restart the server or make the service h-scalable
+const requests = {};
 
-const exampleAppId = '3ece1d94-348e-475c-b131-16987ebb0a35';
-
-// const sp_states = {};
-
-exports.get_metadata = async (req, res, nest) => {
+exports.get_metadata = async (req, res) => {
   debug('--> spid_metadata');
   const credentials = await spidModels.spid_credentials.findOne({
-    where: { application_id: exampleAppId }
+    where: { application_id: req.params.clientId }
   });
 
   const sp_options = get_sp_options(credentials);
 
   const sp = new ServiceProvider(sp_options);
-  const metadata = sp.generateMetadata();
+  const metadata = sp.genersate_metadata();
 
   res.send(metadata);
-    
 };
 
 exports.spid_login = async (req, res, next) => {
   debug('--> spid_login');
-  //FIXME: se popolata la form di inserimento credenziali, il dato arriva a keyrock (ma non dovrebbe)
+
+  //FIXME: se popolata la form di inserimento credenziali, il dato arriva qui (ma non è una soluzione pulita...)
   const credentials = await spidModels.spid_credentials.findOne({
     where: { application_id: req.query.client_id }
   });
@@ -44,14 +45,19 @@ exports.spid_login = async (req, res, next) => {
 
       const sp = new ServiceProvider(sp_options);
       const auth_req = sp.create_authn_request();
-      const url = await sp.getRequestUrl(auth_req.xml);
+      const url = await sp.get_request_url(auth_req.xml);
 
-      requests_app_ids[auth_req.id] = credentials.application_id;
+      requests[auth_req.id] = {
+        client_id: credentials.application_id,
+        state: req.query.state,
+        response_type: req.query.response_type,
+        redirect_uri: req.query.redirect_uri
+      };
 
       // Redirect to SPID IdP
       res.redirect(302, url);
     } else {
-      next(); 
+      next();
     }
   } catch (err) {
     debug(err);
@@ -62,38 +68,36 @@ exports.spid_login = async (req, res, next) => {
 exports.validateResponse = async (req, res, next) => {
   debug('--> spid_response');
 
-  const credentials = await spidModels.spid_credentials.findOne({
-    where: { application_id: exampleAppId }
-  });
-
   try {
+    const credentials = await spidModels.spid_credentials.findOne({
+      where: { application_id: req.params.clientId }
+    });
+
     const sp_options = get_sp_options(credentials);
 
     const sp = new ServiceProvider(sp_options);
-    const respData = await sp.validateResponse(req.body);
+    const resp_data = await sp.validate_response(req.body);
 
-    // id transiente dell'uetnte (cambia ad ogni login)
-    const name_id = respData.user.name_id;
-    // id della sessione spid
-    const session_index = respData.user.session_index;
+    // The name_id will change at avery login (it is forced to be transinet by SPID regultaions)
+    //  so we will check the user by fiscalNumber that should not change (at least if the user does not change his identity)
+    // const name_id = resp_data.user.name_id;
 
-    // Dovrebbe essere pari all'id della richiesta
-    // TODO: Implementare il controllo sul responseto
-    const response_to = respData.response_header.in_response_to;
+    // SPID Has a session_index that will be needed for logout user from his sesssion
+    // const session_index = resp_data.user.session_index;
 
-    if (!requests_app_ids[response_to]) {
+    // Checking response_to that should be one of my requests
+    const response_to = resp_data.response_header.in_response_to;
+    if (!requests[response_to]) {
+      throw new Error('Unknow authentication request!');
     }
 
     const spid_profile = {};
-
-    for (const key in respData.user.attributes) {
-      // if (saml_response.user.attributes.hasOwnProperty(key)) {
-      if (Object.prototype.hasOwnProperty.call(respData.user.attributes, key)) {
-        spid_profile[key] = respData.user.attributes[key][0];
+    for (const key in resp_data.user.attributes) {
+      if (Object.prototype.hasOwnProperty.call(resp_data.user.attributes, key)) {
+        spid_profile[key] = resp_data.user.attributes[key][0];
       }
     }
-
-    const user = await create_user(name_id, spid_profile);
+    const user = await create_user(spid_profile);
 
     let image = '/img/logos/small/user.png';
     if (user.email && user.gravatar) {
@@ -109,25 +113,12 @@ exports.validateResponse = async (req, res, next) => {
       oauth_sign_in: true
     };
 
-    //FIXME: verifica questa gestione dello state come viene fatto per eidas
-    // const state = sp_states[response_to] ? sp_states[response_to] : 'xyz';
-
-    // const redirect_uri = sp_redirect_uris[response_to]
-    //   ? sp_redirect_uris[response_to]
-    //   : req.application.redirect_uri.split(',')[0];
-
-    const application = await models.oauth_client.findOne({
-      where: { id: credentials.application_id }
-    });
-  
-
-    //TODO: Vanno recuperati i dati dell'applicazione che ha fatto la richiesta..
     const path =
-      '/oauth2/authorize' +
-      `?response_type=code` +
-      `&client_id=${credentials.application_id}` +
-      '&state=xyz' + 
-      `&redirect_uri=${application.redirect_uri}`;
+      `/oauth2/authorize` +
+      `?response_type=${requests[response_to].response_type.split(' ').join('%20')}` +
+      `&client_id=${requests[response_to].client_id}` +
+      `&state=${(requests[response_to].state ?? 'xyz').split(' ').join('%20')}` +
+      `&redirect_uri=${requests[response_to].redirect_uri.split(' ').join('%20')}`;
 
     res.redirect(path);
   } catch (err) {
@@ -147,44 +138,48 @@ exports.application_step_spid = (req, res) => {
 };
 
 // POST: /idm/applications/:id/step/spid
-exports.application_save_spid = async (req, res) => {
+exports.application_save_spid = async (req, res, next) => {
   const credentials = req.body.spid_credentials;
 
-  const newValue = spidModels.spid_credentials.build();
-  0;
-  newValue.application_id = req.application.id;
-  newValue.auth_context_comparison = credentials.comparison;
-  newValue.auth_context_cref = credentials.level;
-  newValue.organization_name = credentials.organization_name;
-  newValue.organization_display_name = credentials.organization_display_name;
-  newValue.organization_url = credentials.organization_url;
-  newValue.attributes_list = {
+  let new_value = await spidModels.spid_credentials.findOne({
+    where: { application_id: req.application.id }
+  });
+
+  if (!new_value) {
+    new_value = spidModels.spid_credentials.build();
+    new_value.application_id = req.application.id;
+  }
+
+  new_value.auth_context_comparison = credentials.comparison;
+  new_value.auth_context_cref = credentials.level;
+  new_value.organization_name = credentials.organization_name;
+  new_value.organization_display_name = credentials.organization_display_name;
+  new_value.organization_url = credentials.organization_url;
+  new_value.attributes_list = {
     name: credentials.attributes_name,
     values: credentials.attributes_list.split(', ')
   };
 
   try {
-    await newValue.validate();
-
-    //FIXME: controlla se è gia stata creata l'entità mediante applicationId, altrimenti non crearla di nuovo
-    await newValue.save();
-    await generate_app_certificates(req.application.id, newValue);
+    await new_value.validate();
+    await new_value.save();
+    await generate_app_certificates(req.application.id, new_value);
     req.session.skipSPID = true;
     return res.redirect('/idm/applications/' + req.application.id + '/step/avatar');
   } catch (err) {
     debug(err);
-    next(err);
+    return next(err);
   }
 };
 
 function get_sp_options(credentials) {
   return {
-    signatureAlgorithm: 'sha512',
+    signature_algorithm: 'sha512',
     sp: {
-      entity_id: `${config.spid.gateway_host}/spid/metadata`,
+      entity_id: `${config.spid.gateway_host}/spid/${credentials.application_id}/metadata`,
       private_key: fs.readFileSync(`./certs/applications/spid/${credentials.application_id}-key.pem`, 'utf-8'),
       certificate: fs.readFileSync(`./certs/applications/spid/${credentials.application_id}-cert.pem`, 'utf-8'),
-      assert_endpoint: `${config.spid.gateway_host}/spid/acs`,
+      assert_endpoint: `${config.spid.gateway_host}/spid/${credentials.application_id}/acs`,
 
       // alt_private_keys: [],
       // alt_certs: [],
@@ -199,16 +194,18 @@ function get_sp_options(credentials) {
       // Custom
       organization: {
         name: credentials.organization_name,
-        displayName: credentials.displayName,
-        URL: credentials.organization_url
+        display_name: credentials.displayName,
+        url: credentials.organization_url
       },
+      // eslint-disable-next-line snakecase/snakecase
       attributeConsumingServiceIndex: 1,
       attributes: {
         name: credentials.attributes_list.name,
         values: credentials.attributes_list.values
       }
     },
-    idp: { //TODO: cambia con i security provider
+    idp: {
+      //TODO: cambia con i security provider
       sso_login_url: 'http://localhost:8088/sso',
       sso_logout_url: 'http://localhost:8088/slo',
       certificates: [
@@ -237,7 +234,7 @@ function get_sp_options(credentials) {
   };
 }
 
-async function create_user(name_id, spid_profile) {
+async function create_user(spid_profile) {
   let image_name = 'default';
 
   const file_name = await image.toImage(spid_profile.currentPhoto, 'public/img/users');
@@ -246,17 +243,18 @@ async function create_user(name_id, spid_profile) {
     image_name = file_name;
     delete spid_profile.currentPhoto;
   }
-  const user = await models.user.findOne({ where: { email: spid_profile.email } });
+  // Using fiscalNumber as uinque constranint should be more accureate than e-mail...
+  const user = await models.user.findOne({ where: { eidas_id: spid_profile.fiscalNumber } });
 
   if (!user) {
     // Se non esiste lo creo nuovo
     const userdata = {
       username: spid_profile.name + ' ' + spid_profile.familyName,
-      eidas_id: name_id,
+      eidas_id: spid_profile.fiscalNumber,
       email: spid_profile.email ? spid_profile.email : null,
       image: image_name !== 'default' ? image_name : 'default',
       extra: {
-        spid_profile: spid_profile,
+        spid_profile,
         visible_attributes: ['username', 'description', 'website', 'identity_attributes', 'image', 'gravatar']
       },
       enabled: true
@@ -276,13 +274,14 @@ async function create_user(name_id, spid_profile) {
   }
   const user_extra = user.extra;
   Object.assign(user_extra.spid_profile, new_attributes);
-  if (!user_extra.visible_attributes)
+  if (!user_extra.visible_attributes) {
     user_extra.visible_attributes = ['username', 'description', 'website', 'identity_attributes', 'image', 'gravatar'];
+  }
 
   user.extra = user_extra;
   user.email = spid_profile.email && !user.email ? spid_profile.email : user.email;
   user.username =
-    spid_profile.name + ' ' + spid_profile.familyName != user.username
+    spid_profile.name + ' ' + spid_profile.familyName !== user.username
       ? spid_profile.name + ' ' + spid_profile.familyName
       : user.username;
 
@@ -310,6 +309,11 @@ function generate_app_certificates(app_id, spid_credentials) {
     const key_name = 'certs/applications/spid/' + app_id + '-key.pem';
     const csr_name = 'certs/applications/spid/' + app_id + '-csr.pem';
     const cert_name = 'certs/applications/spid/' + app_id + '-cert.pem';
+
+    // Do not recreate if exists
+    if (fs.existsSync(key_name) && fs.existsSync(cert_name)) {
+      return;
+    }
 
     const key = 'openssl genrsa -out ' + key_name + ' 2048';
     const csr =
