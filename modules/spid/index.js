@@ -2,6 +2,7 @@ const { spid_credentials } = require('./models/models.js');
 const spid_route = require('./routes/spidRoutes.js');
 const spid_app_route = require('./routes/spidAppRoutes.js');
 const debug = require('debug')('spid:module');
+const spid_models = require('./models/models.js');
 
 exports.install = function (app, config) {
   if (config.spid.enabled) {
@@ -40,17 +41,20 @@ exports.install = function (app, config) {
     // Crea la tabella o la aggiorna
     spid_credentials.sync({ alter: true });
 
+    app.use('/oauth2/authorize', async function (req, res, next) {
+      const credentials = await spid_models.spid_credentials.findOne({
+        where: { application_id: req.query.client_id }
+      });
 
-    app.use('/oauth2/authorize', function(req, res, next) {
-      res.locals.spid_auth = {
-        // xml = req.saml_auth_request.xml,
-        // postLocationUrl = req.saml_auth_request.postLocationUrl,
-        // redirectLocationUrl = req.saml_auth_request.redirectLocationUrl,
-        login_button_label:'SPID Login',
-        enabled: true
-      };
+      if (credentials) {
+        res.locals.spid_auth = {
+          login_button_label: 'SPID Login',
+          enabled: true
+        };
+      }
+
       next();
-  });
+    });
   }
 };
 

@@ -4,8 +4,7 @@ const debug = require('debug')('idm:spid_controller');
 const { ServiceProvider } = require('../lib/spid.js');
 const image = require('../../../lib/image.js');
 const models = require('../../../models/models.js');
-// eslint-disable-next-line snakecase/snakecase
-const spidModels = require('../models/models.js');
+const spid_models = require('../models/models.js');
 const path = require('path');
 const exec = require('child_process').exec;
 const config_service = require('../../../lib/configService.js');
@@ -18,7 +17,7 @@ const requests = {};
 
 exports.get_metadata = async (req, res) => {
   debug('--> spid_metadata');
-  const credentials = await spidModels.spid_credentials.findOne({
+  const credentials = await spid_models.spid_credentials.findOne({
     where: { application_id: req.params.clientId }
   });
 
@@ -34,7 +33,7 @@ exports.spid_login = async (req, res, next) => {
   debug('--> spid_login');
 
   //FIXME: se popolata la form di inserimento credenziali, il dato arriva qui (ma non è una soluzione pulita...)
-  const credentials = await spidModels.spid_credentials.findOne({
+  const credentials = await spid_models.spid_credentials.findOne({
     where: { application_id: req.query.client_id }
   });
 
@@ -69,7 +68,7 @@ exports.validateResponse = async (req, res, next) => {
   debug('--> spid_response');
 
   try {
-    const credentials = await spidModels.spid_credentials.findOne({
+    const credentials = await spid_models.spid_credentials.findOne({
       where: { application_id: req.params.clientId }
     });
 
@@ -141,12 +140,12 @@ exports.application_step_spid = (req, res) => {
 exports.application_save_spid = async (req, res, next) => {
   const credentials = req.body.spid_credentials;
 
-  let new_value = await spidModels.spid_credentials.findOne({
+  let new_value = await spid_models.spid_credentials.findOne({
     where: { application_id: req.application.id }
   });
 
   if (!new_value) {
-    new_value = spidModels.spid_credentials.build();
+    new_value = spid_models.spid_credentials.build();
     new_value.application_id = req.application.id;
   }
 
