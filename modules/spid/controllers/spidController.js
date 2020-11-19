@@ -204,27 +204,6 @@ exports.application_details_spid = async (req, res, next) => {
   const credentials = await spid_models.spid_credentials.findOne({
     where: { application_id: req.params.application_id }
   });
-  
-  if (!res.locals.module_parts) {
-    res.locals.module_parts = [];
-  }
-  
-  if (credentials) {
-    res.locals.module_parts.push(
-      render(
-        fs.readFileSync(path.resolve('./modules/spid//views/spid_details.ejs'), { encoding: 'utf-8' }).toString(),
-        credentials
-      )
-    );
-  }
-  next();
-};
-
-// GET: /idm/applications/:id
-exports.application_details_spid = async (req, res, next) => {
-  const credentials = await spid_models.spid_credentials.findOne({
-    where: { application_id: req.params.application_id }
-  });
 
   if (!res.locals.module_parts) {
     res.locals.module_parts = [];
