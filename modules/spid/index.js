@@ -9,6 +9,7 @@ exports.install = function (app, config) {
     app.use((req, res, next) => {
       // Se devo saltare lo spid
       if (req.session.skipSPID) {
+        req.session.skipSPID = false;
         next();
         return;
       }

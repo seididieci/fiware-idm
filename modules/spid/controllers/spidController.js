@@ -130,6 +130,7 @@ exports.validateResponse = async (req, res, next) => {
 // GET: /idm/applications/:id/step/spid
 exports.application_step_spid = (req, res) => {
   res.render('../modules/spid/views/step_spid.ejs', {
+    spid_enabled: false,
     application: req.application,
     spid_credentials: [],
     errors: [],
@@ -139,6 +140,12 @@ exports.application_step_spid = (req, res) => {
 
 // POST: /idm/applications/:id/step/spid
 exports.application_save_spid = async (req, res, next) => {
+  
+  if( !req.body.spid_enabled){
+    req.session.skipSPID = true;
+    return res.redirect('/idm/applications/' + req.application.id + '/step/avatar');
+  }
+
   const credentials = req.body.spid_credentials;
 
   let new_value = await spid_models.spid_credentials.findOne({
@@ -166,10 +173,51 @@ exports.application_save_spid = async (req, res, next) => {
     await generate_app_certificates(req.application.id, new_value);
     req.session.skipSPID = true;
     return res.redirect('/idm/applications/' + req.application.id + '/step/avatar');
-  } catch (err) {
-    debug(err);
-    return next(err);
+  } catch (error) {
+    debug('Error: ', error);
+
+    const name_errors = [];
+
+    if (error.errors && error.errors.length) {
+      for (const i in error.errors) {
+        name_errors.push(error.errors[i].message);
+      }
+    }
+
+    res.locals.message = {
+      text: ' Fail creating SPID credentials.',
+      type: 'warning'
+    };
+
+    return res.render('../modules/spid/views/step_spid.ejs', {
+      spid_enabled: req.body.spid_enabled,
+      application: req.application,
+      spid_credentials: new_value,
+      errors: name_errors,
+      csrf_token: req.csrfToken()
+    });
   }
+};
+
+// GET: /idm/applications/:id
+exports.application_details_spid = async (req, res, next) => {
+  const credentials = await spid_models.spid_credentials.findOne({
+    where: { application_id: req.params.application_id }
+  });
+  
+  if (!res.locals.module_parts) {
+    res.locals.module_parts = [];
+  }
+  
+  if (credentials) {
+    res.locals.module_parts.push(
+      render(
+        fs.readFileSync(path.resolve('./modules/spid//views/spid_details.ejs'), { encoding: 'utf-8' }).toString(),
+        credentials
+      )
+    );
+  }
+  next();
 };
 
 // GET: /idm/applications/:id

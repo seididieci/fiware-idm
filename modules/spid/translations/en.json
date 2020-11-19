@@ -1,5 +1,7 @@
 {
   "spid": {
+    "enable_spid_checkbox": "SPID Authentication Enabled",
+    "required_field": "This is a required field.",
     "login":{
       "spid_loginin_btn": "SPID Login"
     },
