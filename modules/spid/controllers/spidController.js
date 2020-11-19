@@ -178,14 +178,19 @@ exports.application_details_spid = async (req, res, next) => {
     where: { application_id: req.params.application_id }
   });
 
+  if (!res.locals.module_parts) {
+    res.locals.module_parts = [];
+  }
+
   if (credentials) {
-    if (!res.locals.module_parts) {
-      res.locals.module_parts = [];
-    }
     res.locals.module_parts.push(
       render(
         fs.readFileSync(path.resolve('./modules/spid//views/spid_details.ejs'), { encoding: 'utf-8' }).toString(),
-        credentials
+        {
+          credentials,
+          metadata: `${config.spid.gateway_host}/spid/${credentials.application_id}/metadata`,
+          translations: req.app.locals.spid_translation
+        }
       )
     );
   }

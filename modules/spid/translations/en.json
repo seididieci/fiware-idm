@@ -14,7 +14,10 @@
       "name": "Name",
       "list": "Attributes list"
     },
-
+    "application" :{
+      "spid_credentials" : "SPID credentials",
+      "metadata": "SPID service provider metadata URL"
+    },
     "authcontext":{
       "title": "Authorization context",
       "comparison": "Comparison mode",

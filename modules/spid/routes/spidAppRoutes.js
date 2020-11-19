@@ -27,7 +27,20 @@ router.get(
   spid_controller.application_step_spid
 );
 
-router.get('/:application_id', spid_controller.application_details_spid);
+// Questa va messa (copiata dalle rotte originarie) altrimenti la rotta qui sotto viene risolta prima...
+router.get('/new', csrf_protection, index_controller.applications.new);
+
+router.get(
+  '/:application_id',
+  i18n({
+    translationsPath: path.join(__dirname, '../translations'), // eslint-disable-line snakecase/snakecase
+    siteLangs: ['en', 'es', 'ja', 'ko'], // eslint-disable-line snakecase/snakecase
+    textsVarName: 'spid_translation', // eslint-disable-line snakecase/snakecase
+    browserEnable: true, // eslint-disable-line snakecase/snakecase
+    defaultLang: 'en' // eslint-disable-line snakecase/snakecase
+  }),
+  spid_controller.application_details_spid
+);
 
 router.post(
   '/:application_id/step/spid',
