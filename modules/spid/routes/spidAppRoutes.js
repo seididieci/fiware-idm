@@ -27,6 +27,8 @@ router.get(
   spid_controller.application_step_spid
 );
 
+router.get('/:application_id', spid_controller.application_details_spid);
+
 router.post(
   '/:application_id/step/spid',
   index_controller.sessions.login_required,

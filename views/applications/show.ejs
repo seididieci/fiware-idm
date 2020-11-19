@@ -3,7 +3,7 @@
         <header>
             <h4 class="name">
                 <%= application.name %>
-                <% if (user_logged_permissions.includes('2')) { -%>   
+                <% if (user_logged_permissions.includes('2')) { -%>
                     <a href="/idm/applications/<%= application.id %>/edit/" class="small">
                         <i class="fa fa-edit"></i>
                         <span><%=translation.applications.show.span01%></span>
@@ -168,7 +168,7 @@
                                 </div>
                             <% } else { -%>
                                 <h6 class="panel-heading"></h6>
-                                <a id="register_pep" href="/idm/applications/<%= application.id %>/pep/register/" class="btn btn-default"><%=translation.applications.show.register_pep_btn%></a>            
+                                <a id="register_pep" href="/idm/applications/<%= application.id %>/pep/register/" class="btn btn-default"><%=translation.applications.show.register_pep_btn%></a>
                             <% } -%>
                         </div>
                     </div>
@@ -218,11 +218,11 @@
                     <div class="filter table_search client">
                         <input class="form-control" value="" type="text" name="trust_apps__filter__q" placeholder="<%=translation.applications.show.placeholder_input%>">
                     </div>
-                    <div id="spinner_trust_apps" class="filtering-spinner-inline" style="display: none;"><i class="fa fa-circle-o-notch fa-spin"></i></div>                    
+                    <div id="spinner_trust_apps" class="filtering-spinner-inline" style="display: none;"><i class="fa fa-circle-o-notch fa-spin"></i></div>
                     <% if (user_logged_permissions.some(r=> ['1', '5', '6'].includes(r))) { -%>
-                        <div class="btn-group"> 
+                        <div class="btn-group">
                             <button title="Add" class="btn btn-default btn-sm ajax-modal" data-toggle="modal" data-target="#add_trusted_app" id="add_trusted_app_button">
-                                <i class="fa fa-plus"></i> 
+                                <i class="fa fa-plus"></i>
                                 <span class="action">
                                     <%=translation.applications.show.add_trusted_btn%>
                                 </span>
@@ -248,11 +248,11 @@
                     <div class="filter table_search client">
                         <input class="form-control" value="" type="text" name="auth_users__filter__q" placeholder="<%=translation.applications.show.placeholder_input%>">
                     </div>
-                    <div id="spinner_auth_users" class="filtering-spinner-inline" style="display: none;"><i class="fa fa-circle-o-notch fa-spin"></i></div>                    
+                    <div id="spinner_auth_users" class="filtering-spinner-inline" style="display: none;"><i class="fa fa-circle-o-notch fa-spin"></i></div>
                     <% if (user_logged_permissions.some(r=> ['1', '5', '6'].includes(r))) { -%>
-                        <div class="btn-group"> 
+                        <div class="btn-group">
                             <button title="Authorize" class="btn btn-default btn-sm ajax-modal" data-toggle="modal" data-target="#authorize_user" id="auth_users_action_manage_application_users">
-                                <i class="fa fa-key"></i> 
+                                <i class="fa fa-key"></i>
                                 <span class="action">
                                     <%=translation.applications.show.authorize_btn%>
                                 </span>
@@ -280,9 +280,9 @@
                     </div>
                     <div id="spinner_organizations" class="filtering-spinner-inline" style="display: none;"><i class="fa fa-circle-o-notch fa-spin"></i></div>
                     <% if (user_logged_permissions.some(r=> ['1', '5', '6'].includes(r))) { -%>
-                        <div class="btn-group"> 
+                        <div class="btn-group">
                             <button title="Authorize" data-toggle="modal" data-target="#authorize_organization" class="btn btn-default btn-sm ajax-modal" id="auth_organizations_action_manage_application_organizations">
-                                <i class="fa fa-key"></i> 
+                                <i class="fa fa-key"></i>
                                 <span class="action">
                                     <%=translation.applications.show.authorize_btn%>
                                 </span>
@@ -293,7 +293,7 @@
             </div>
             <div class="panel-body datatable-content">
                 <div id="auth_organizations_content" class="list-group">
-                    <p class="alert alert-info empty" style="display: none;"><%=translation.applications.show.content03%></p>                    
+                    <p class="alert alert-info empty" style="display: none;"><%=translation.applications.show.content03%></p>
                 </div>
             </div>
             <div class="panel-footer">
@@ -304,11 +304,11 @@
             <div class="panel panel-default info">
                 <div class="panel-heading">
                     <span class="title"><i class="far fa-id-card"></i><%=translation.applications.show.panel_title07%></span>
-                    <div class="table_actions clearfix">               
+                    <div class="table_actions clearfix">
                         <div class="btn-group">
                             <a href="/idm/applications/<%= application.id %>/edit/eidas" class="small">
                                 <button title="Add" class="btn btn-default btn-sm">
-                                    <i class="fa fa-edit"></i> 
+                                    <i class="fa fa-edit"></i>
                                     <span class="action">
                                         <%=translation.applications.show.edit_btn%>
                                     </span>
@@ -337,7 +337,13 @@
                 </div>
             </div>
         <% } -%>
-
+        <% if (user_logged_permissions.includes('2')) { -%>
+          <% for (const part of module_parts) { -%>
+            <div>
+              <%- part -%>
+            </div>
+          <% } -%>
+        <% } -%>
     </div>
 </div>
 

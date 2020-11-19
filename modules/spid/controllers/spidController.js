@@ -10,6 +10,7 @@ const exec = require('child_process').exec;
 const config_service = require('../../../lib/configService.js');
 const config = config_service.get_config();
 const gravatar = require('gravatar');
+const { render } = require('ejs');
 
 // Keep request in-memory
 // TODO: This should be moved in the db if we have to restart the server or make the service h-scalable
@@ -169,6 +170,26 @@ exports.application_save_spid = async (req, res, next) => {
     debug(err);
     return next(err);
   }
+};
+
+// GET: /idm/applications/:id
+exports.application_details_spid = async (req, res, next) => {
+  const credentials = await spid_models.spid_credentials.findOne({
+    where: { application_id: req.params.application_id }
+  });
+
+  if (credentials) {
+    if (!res.locals.module_parts) {
+      res.locals.module_parts = [];
+    }
+    res.locals.module_parts.push(
+      render(
+        fs.readFileSync(path.resolve('./modules/spid//views/spid_details.ejs'), { encoding: 'utf-8' }).toString(),
+        credentials
+      )
+    );
+  }
+  next();
 };
 
 function get_sp_options(credentials) {
