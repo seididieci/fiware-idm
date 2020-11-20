@@ -165,13 +165,39 @@ app.use(function (req, res, next) {
 
 // Check for plugins and install it...
 const fs = require('fs');
-if (fs.existsSync(path.resolve('./plugins'))) {
-  const plugins_loader = require('./lib/pluginLoader');
-  const plugins = plugins_loader.loadPlugins(path.resolve('./plugins'));
-  for (const plug in plugins) {
-    if (Object.prototype.hasOwnProperty.call(plugins, plug)) {
-      plugins[plug].install(app, config);
+const plugins_loader = require('./lib/pluginLoader');
+const plugins = plugins_loader.loadPlugins();
+
+// Add plugin list to app variables
+app.use((req, res, next) => {
+  req.app.plugins = plugins;
+
+  // Prepare plugin_parts for adding parts to views from plugins
+  if (!res.locals.plugin_parts) {
+    res.locals.plugin_parts = [];
+  }
+
+  next();
+});
+
+for (const plug in plugins) {
+  if (Object.prototype.hasOwnProperty.call(plugins, plug)) {
+    // Let's load plugins translation
+    const translation_path = path.resolve(path.join('./plugins', plug, 'translations'));
+    if (fs.existsSync(translation_path)) {
+      app.use(
+        i18n({
+          translationsPath: translation_path, // eslint-disable-line snakecase/snakecase
+          siteLangs: ['en', 'es', 'ja', 'ko'], // eslint-disable-line snakecase/snakecase
+          textsVarName: `${plug}_translation`, // eslint-disable-line snakecase/snakecase
+          browserEnable: true, // eslint-disable-line snakecase/snakecase
+          defaultLang: 'en' // eslint-disable-line snakecase/snakecase
+        })
+      );
     }
+
+    // Call install method
+    plugins[plug].install(app, config);
   }
 }
 

@@ -61,17 +61,23 @@ router.get(
   csrf_protection,
   web_trusted_apps_controller.get_trusted_applications
 );
-if (config.eidas) {
-  router.get(
-    '/:application_id',
-    web_check_perm_controller.owned_permissions,
-    csrf_protection,
-    saml2_controller.search_eidas_credentials,
-    web_app_controller.show
-  );
-} else {
-  router.get('/:application_id', web_check_perm_controller.owned_permissions, csrf_protection, web_app_controller.show);
+
+// Load plugins show handlres
+const plugin_loader = require('../../lib/pluginLoader');
+const show_handlers = [web_check_perm_controller.owned_permissions, csrf_protection];
+const plugins = plugin_loader.loadPlugins();
+for (const plug in plugins) {
+  if (Object.prototype.hasOwnProperty.call(plugins, plug)) {
+    if (plugins[plug].app_show_handler) {
+      show_handlers.push(plugins[plug].app_show_handler);
+    }
+  }
 }
+if (config.eidas) {
+  show_handlers.push(saml2_controller.search_eidas_credentials);
+}
+router.get('/:application_id', ...show_handlers, web_app_controller.show);
+
 router.get(
   '/:application_id/step/avatar',
   web_check_perm_controller.owned_permissions,

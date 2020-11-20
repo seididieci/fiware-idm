@@ -8,109 +8,109 @@
                     <div class="step">3</div>
                     <div class="line"></div>
                 </div>
-        </h3><h3 class="step-title"><%=translation.spid.step_create_spid_credentials.title%></h3>
+        </h3><h3 class="step-title"><%=spid_translation.step_create_spid_credentials.title%></h3>
     </div>
-        <form id="spid_credentials" ng-controller="DummyCtrl" name="" autocomplete="" class="ng-scope ng-pristine ng-valid" 
+        <form id="spid_credentials" ng-controller="DummyCtrl" name="" autocomplete="" class="ng-scope ng-pristine ng-valid"
         action="/idm/applications/<%= application.id %>/step/spid" method="POST" enctype="">
           <input type='hidden' name='_csrf' value=<%= csrf_token %> />
           <label>
-            <input type="checkbox" name='spid_enabled' id="spid_enabled" value="true" onchange="toggle_form_body()" 
+            <input type="checkbox" name='spid_enabled' id="spid_enabled" value="true" onchange="toggle_form_body()"
                 <%= spid_enabled ? 'checked' : '' %>>
             <span class="lbl padding-0 lbl_01">
-                <%=translation.spid.enable_spid_checkbox%>
+                <%=spid_translation.enable_spid_checkbox%>
             </span>
         </label>
             <div id="spid_credentials_form_body" class="modal-body clearfix <%= spid_enabled ? 'visible' : 'hidden' %>" >
                 <fieldset>
                     <div class="form-group required spid">
-                        <label class="control-label required"><%=translation.spid.organization.title%></label>
+                        <label class="control-label required"><%=spid_translation.organization.title%></label>
                         <div class="spid_input">
-                            <label class="control-label required" for="id_organization_name"><%=translation.spid.organization.name%></label>
+                            <label class="control-label required" for="id_organization_name"><%=spid_translation.organization.name%></label>
                             <div class="">
                                 <input class="form-control" id="id_organization_name" name="spid_credentials[organization_name]" type="text" value="<%= spid_credentials.organization_name %>">
                             </div>
                             <% if (errors.indexOf("organization_name") != -1) { %>
-                                <span class="help-block alert alert-danger "><%=translation.spid.required_field%></span>
+                                <span class="help-block alert alert-danger "><%=spid_translation.required_field%></span>
                             <% } %>
                         </div>
                         <div class="spid_input">
-                            <label class="control-label required" for="id_organization_display_name"><%=translation.spid.organization.displayName%></label>
+                            <label class="control-label required" for="id_organization_display_name"><%=spid_translation.organization.displayName%></label>
                             <div class="">
                                 <input class="form-control" id="id_organization_display_name" name="spid_credentials[organization_display_name]" type="text" value="<%= spid_credentials.organization_display_name %>">
                             </div>
                             <% if (errors.indexOf("organization_display_name") != -1) { %>
-                                <span class="help-block alert alert-danger "><%=translation.spid.required_field%></span>
+                                <span class="help-block alert alert-danger "><%=spid_translation.required_field%></span>
                             <% } %>
                         </div>
                         <div class="spid_input">
-                            <label class="control-label required" for="id_organization_url"><%=translation.spid.organization.url%></label>
+                            <label class="control-label required" for="id_organization_url"><%=spid_translation.organization.url%></label>
                             <div class="">
                                 <input class="form-control" id="id_organization_url" name="spid_credentials[organization_url]" type="text" value="<%= spid_credentials.organization_url %>">
                             </div>
                             <% if (errors.indexOf("organization_url") != -1) { %>
-                                <span class="help-block alert alert-danger "><%=translation.spid.required_field%></span>
+                                <span class="help-block alert alert-danger "><%=spid_translation.required_field%></span>
                             <% } %>
                         </div>
                     </div>
                     <div class="form-group required spid">
-                        <label class="control-label required"><%=translation.spid.attributes.title%></label>
+                        <label class="control-label required"><%=spid_translation.attributes.title%></label>
                         <div class="spid_input">
-                            <label class="control-label required" for="id_attributes_name"><%=translation.spid.attributes.name%></label>
+                            <label class="control-label required" for="id_attributes_name"><%=spid_translation.attributes.name%></label>
                             <div class="">
                                 <input class="form-control" id="id_attributes_name" name="spid_credentials[attributes_name]" type="text" value="<%= spid_credentials.attributes_name %>">
                             </div>
                             <% if (errors.indexOf("attributes_name") != -1) { %>
-                                <span class="help-block alert alert-danger "><%=translation.spid.required_field%></span>
+                                <span class="help-block alert alert-danger "><%=spid_translation.required_field%></span>
                             <% } %>
                         </div>
                         <div class="spid_input">
-                            <label class="control-label required" for="id_attributes_list"><%=translation.spid.attributes.list%></label>
+                            <label class="control-label required" for="id_attributes_list"><%=spid_translation.attributes.list%></label>
                             <div class="">
                                 <input class="form-control" id="id_attributes_list" name="spid_credentials[attributes_list]" type="text" value="<%= spid_credentials.attributes_list %>">
                             </div>
                             <% if (errors.indexOf("attributes_list") != -1) { %>
-                                <span class="help-block alert alert-danger "><%=translation.spid.required_field%></span>
+                                <span class="help-block alert alert-danger "><%=spid_translation.required_field%></span>
                             <% } %>
                         </div>
                     </div>
                     <div class="form-group required spid">
-                        <label class="control-label required"><%=translation.spid.authcontext.title%></label>
+                        <label class="control-label required"><%=spid_translation.authcontext.title%></label>
                         <div class="spid_input_comparaison">
                         <div class="">
                             <div class="select-multiple form-group">
-                            <label class="control-label required" for="comparison"><%=translation.spid.authcontext.comparison%></label>
+                            <label class="control-label required" for="comparison"><%=spid_translation.authcontext.comparison%></label>
                                 <select id="comparison" name="spid_credentials[comparison]" class="selectpicker" data-size="4" data-width="100%" data-dropup-auto="false">
-                                <option selected value="minimum"><%=translation.spid.minimum%></option>
-                                <option value="better"><%=translation.spid.better%></option>
-                                <option value="maximum"><%=translation.spid.maximum%></option>
-                                <option value="exact"><%=translation.spid.exact%></option>
+                                <option selected value="minimum"><%=spid_translation.minimum%></option>
+                                <option value="better"><%=spid_translation.better%></option>
+                                <option value="maximum"><%=spid_translation.maximum%></option>
+                                <option value="exact"><%=spid_translation.exact%></option>
                                 </select>
                             </div>
                         </div>
                             <% if (errors.indexOf("comparison") != -1) { %>
-                                <span class="help-block alert alert-danger "><%=translation.spid.required_field%></span>
+                                <span class="help-block alert alert-danger "><%=spid_translation.required_field%></span>
                             <% } %>
                         </div>
                         <div class="spid_input_level">
                         <div class="">
                             <div class="select-multiple form-group">
-                                <label class="control-label required" for="level"><%=translation.spid.authcontext.level%></label>
+                                <label class="control-label required" for="level"><%=spid_translation.authcontext.level%></label>
                                 <select id="sp_type" name="spid_credentials[level]" class="selectpicker" data-size="3" data-width="100%" data-dropup-auto="false">
-                                    <option selected value="https://www.spid.gov.it/SpidL1"><%=translation.spid.level1%></option>
-                                    <option value="https://www.spid.gov.it/SpidL2"><%=translation.spid.level2%></option>
-                                    <option value="https://www.spid.gov.it/SpidL3"><%=translation.spid.level3%></option>
+                                    <option selected value="https://www.spid.gov.it/SpidL1"><%=spid_translation.level1%></option>
+                                    <option value="https://www.spid.gov.it/SpidL2"><%=spid_translation.level2%></option>
+                                    <option value="https://www.spid.gov.it/SpidL3"><%=spid_translation.level3%></option>
                                 </select>
                             </div>
                         </div>
                         <% if (errors.indexOf("level") != -1) { %>
-                            <span class="help-block alert alert-danger" style="margin-top: 55px"><%=translation.spid.alert01%></span>
+                            <span class="help-block alert alert-danger" style="margin-top: 55px"><%=spid_translation.alert01%></span>
                         <% } %>
                     </div>
                     </div>
                 </fieldset>
             </div>
           <div class="modal-footer">
-              <button type="submit" class="btn btn-primary"><%=translation.spid.step_create_spid_credentials.next_btn%></button>
+              <button type="submit" class="btn btn-primary"><%=spid_translation.step_create_spid_credentials.next_btn%></button>
           </div>
         </form>
     </div>
@@ -119,15 +119,15 @@
 <script type="text/javascript">
 
     function toggle_form_body(){
-        
+
         var x = document.getElementById("spid_credentials_form_body");
         if (document.getElementById("spid_enabled").checked == true) {
             x.classList.remove("hidden");
             x.classList.add("visible");
         } else {
             x.classList.add("hidden");
-            x.classList.remove("visible");                    
-        }                
+            x.classList.remove("visible");
+        }
     }
 
     $(function () {

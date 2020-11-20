@@ -10,7 +10,7 @@ const exec = require('child_process').exec;
 const config_service = require('../../../lib/configService.js');
 const config = config_service.get_config();
 const gravatar = require('gravatar');
-const { render } = require('ejs');
+// const { render } = require('ejs');
 
 // Keep request in-memory
 // TODO: This should be moved in the db if we have to restart the server or make the service h-scalable
@@ -129,7 +129,7 @@ exports.validateResponse = async (req, res, next) => {
 
 // GET: /idm/applications/:id/step/spid
 exports.application_step_spid = (req, res) => {
-  res.render('../modules/spid/views/step_spid.ejs', {
+  res.render('../plugins/spid/views/step_spid.ejs', {
     spid_enabled: false,
     application: req.application,
     spid_credentials: [],
@@ -140,7 +140,7 @@ exports.application_step_spid = (req, res) => {
 
 // POST: /idm/applications/:id/step/spid
 exports.application_save_spid = async (req, res) => {
-  if( !req.body.spid_enabled){
+  if (!req.body.spid_enabled) {
     req.session.skipSPID = true;
     return res.redirect('/idm/applications/' + req.application.id + '/step/avatar');
   }
@@ -188,7 +188,7 @@ exports.application_save_spid = async (req, res) => {
       type: 'warning'
     };
 
-    return res.render('../modules/spid/views/step_spid.ejs', {
+    return res.render('../plugins/spid/views/step_spid.ejs', {
       spid_enabled: req.body.spid_enabled,
       application: req.application,
       spid_credentials: new_value,
@@ -204,23 +204,16 @@ exports.application_details_spid = async (req, res, next) => {
     where: { application_id: req.params.application_id }
   });
 
-  if (!res.locals.module_parts) {
-    res.locals.module_parts = [];
+  if (!res.locals.plugin_parts) {
+    res.locals.plugin_parts = [];
   }
 
   if (credentials) {
-    res.locals.module_parts.push(
-      render(
-        fs.readFileSync(path.resolve('./modules/spid//views/spid_details.ejs'), { encoding: 'utf-8' }).toString(),
-        {
-          credentials,
-          metadata: `${config.spid.gateway_host}/spid/${credentials.application_id}/metadata`,
-          translation: req.app.locals.translation,
-          spid_translation: req.app.locals.spid_translation,
-        }
-      )
-    );
+    res.locals.spid_credentials = credentials;
+    res.locals.spid_metadata = `${config.spid.gateway_host}/spid/${credentials.application_id}/metadata`;
+    res.locals.plugin_parts.push(path.resolve('./plugins/spid/views/spid_details.ejs'));
   }
+
   next();
 };
 
@@ -262,21 +255,21 @@ function get_sp_options(credentials) {
       sso_logout_url: 'http://localhost:8088/slo',
       certificates: [
         `MIIC+zCCAeOgAwIBAgIUeYWcwo2OxQ7mdjwhb3FsSylBs/EwDQYJKoZIhvcNAQEL
-              BQAwDTELMAkGA1UEBhMCSVQwHhcNMjAxMDI4MTEzNjIxWhcNMjAxMTI3MTEzNjIx
-              WjANMQswCQYDVQQGEwJJVDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
-              ANIz6ELcW42s8tit/+5XiZn4eknpywvPPx1PoJYavZFdL8limDbIOTPwkbEqXJ0g
-              nMOmTkF+5RsS5jQAVuendWoZcW2HDD1bT8RZME5GdpxMDvljtfQS709BdAlLuzE5
-              W7PFGhKr8pgzwhhd4W6DUb1UqUsC/egWkXCw7khgdwsUX/vHK5WeIinGyD10B+Kt
-              9I+TKUuyvhdldzdArqdQKFMK2PYLJLHiNU0R5kqiM/joBZYwjjNz+4kRFoc/CS7A
-              2binzz6QVYZ+F+GXSGeUnoBxIchWghrmVnLckIBGq2GThoHoLzj0vSq2x2OYMS7b
-              9Duumathd0QTDOpqmXxguRkCAwEAAaNTMFEwHQYDVR0OBBYEFHNd9zKL4d+yM+we
-              yqIVag9T6xS9MB8GA1UdIwQYMBaAFHNd9zKL4d+yM+weyqIVag9T6xS9MA8GA1Ud
-              EwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAM5g1Cdj1MfZDAv447ROmAfw
-              ts9Jx5qiE4vwP8mGBvumkHJNbeDLtWA5HQtmxfOms0BPu0LfVLG0Ci9V/zErSkg/
-              TwazpgPMy9NBEVXgTnCwX/aaaKqs7DikA3f7pJOWfs1Mh/F6GNFR9TKXq5HYc2N0
-              kEbhpC3iWdwCxqrpa7lDUvJ/GCRPT8j65a6ZbfYloemjd6QflCRN9EvjFMLYd7oJ
-              T9kLq09OvFeyuzcE0HpZIu++D4zOmjsNdcaktmXuVZEWTRQOcmX24V9AhQY46rju
-              31q/xjpkyW8r0CmAGdBAVY2ILKXtqe9LMlvqOKhzkU8ct9DwYLKH30lcFhhaQps=`
+         BQAwDTELMAkGA1UEBhMCSVQwHhcNMjAxMDI4MTEzNjIxWhcNMjAxMTI3MTEzNjIx
+         WjANMQswCQYDVQQGEwJJVDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+         ANIz6ELcW42s8tit/+5XiZn4eknpywvPPx1PoJYavZFdL8limDbIOTPwkbEqXJ0g
+         nMOmTkF+5RsS5jQAVuendWoZcW2HDD1bT8RZME5GdpxMDvljtfQS709BdAlLuzE5
+         W7PFGhKr8pgzwhhd4W6DUb1UqUsC/egWkXCw7khgdwsUX/vHK5WeIinGyD10B+Kt
+         9I+TKUuyvhdldzdArqdQKFMK2PYLJLHiNU0R5kqiM/joBZYwjjNz+4kRFoc/CS7A
+         2binzz6QVYZ+F+GXSGeUnoBxIchWghrmVnLckIBGq2GThoHoLzj0vSq2x2OYMS7b
+         9Duumathd0QTDOpqmXxguRkCAwEAAaNTMFEwHQYDVR0OBBYEFHNd9zKL4d+yM+we
+         yqIVag9T6xS9MB8GA1UdIwQYMBaAFHNd9zKL4d+yM+weyqIVag9T6xS9MA8GA1Ud
+         EwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAM5g1Cdj1MfZDAv447ROmAfw
+         ts9Jx5qiE4vwP8mGBvumkHJNbeDLtWA5HQtmxfOms0BPu0LfVLG0Ci9V/zErSkg/
+         TwazpgPMy9NBEVXgTnCwX/aaaKqs7DikA3f7pJOWfs1Mh/F6GNFR9TKXq5HYc2N0
+         kEbhpC3iWdwCxqrpa7lDUvJ/GCRPT8j65a6ZbfYloemjd6QflCRN9EvjFMLYd7oJ
+         T9kLq09OvFeyuzcE0HpZIu++D4zOmjsNdcaktmXuVZEWTRQOcmX24V9AhQY46rju
+         31q/xjpkyW8r0CmAGdBAVY2ILKXtqe9LMlvqOKhzkU8ct9DwYLKH30lcFhhaQps=`
       ],
       force_authn: false,
       sign_get_request: true,

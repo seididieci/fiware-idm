@@ -338,9 +338,9 @@
             </div>
         <% } -%>
         <% if (user_logged_permissions.includes('2')) { -%>
-          <% for (const part of module_parts) { -%>
+          <% for (const part of plugin_parts) { -%>
             <div>
-              <%- part -%>
+              <%- include(part) -%>
             </div>
           <% } -%>
         <% } -%>

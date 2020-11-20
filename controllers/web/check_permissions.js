@@ -1,8 +1,6 @@
 const models = require('../../models/models.js');
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
-const plugin_loader = require('../../lib/pluginLoader');
-
 const debug = require('debug')('idm:web-check_permissions_controller');
 
 // Middleware to see user permissions in the application
@@ -73,6 +71,17 @@ exports.owned_permissions = function (req, res, next) {
       if (check_user_action(req.application, req.path, req.method, user_permissions_id)) {
         next();
       } else {
+        // Checking plugin permissions (here so no plugin can bypass default permissions...)
+        for (const plug in req.app.plugins) {
+          if (Object.prototype.hasOwnProperty.call(req.app.plugins, plug)) {
+            if (Object.prototype.hasOwnProperty.call(req.app.plugins[plug], 'check_user_action')) {
+              if (req.app.plugins[plug].check_user_action(req.application, req.path, req.method, user_permissions_id)) {
+                next();
+              }
+            }
+          }
+        }
+
         throw new Error('not_allow');
       }
     })
@@ -94,18 +103,6 @@ exports.owned_permissions = function (req, res, next) {
 // - 5 Get and assign all public application roles
 // - 6 Get and assign only public owned roles
 function check_user_action(application, path, method, permissions) {
-  // Checking if some module needs to bypass default permissions
-  const plugins = plugin_loader.loadModules();
-  for (const plug in plugins) {
-    if (Object.prototype.hasOwnProperty.call(plugins, plug)) {
-      if (Object.prototype.hasOwnProperty.call(plugins[plug], 'check_user_action')) {
-        if (plugins[plug].check_user_action(application, path, method, permissions)) {
-          return true;
-        }
-      }
-    }
-  }
-
   switch (true) {
     case path.includes('step/avatar') || path.includes('step/eidas'):
       if (permissions.includes('2')) {

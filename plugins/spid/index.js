@@ -3,6 +3,7 @@ const spid_route = require('./routes/spidRoutes.js');
 const spid_app_route = require('./routes/spidAppRoutes.js');
 const debug = require('debug')('spid:module');
 const spid_models = require('./models/models.js');
+const spid_controller = require('./controllers/spidController');
 
 exports.install = function (app, config) {
   if (config.spid.enabled) {
@@ -75,3 +76,5 @@ exports.check_user_action = function (application, path, method, permissions) {
 
   return false;
 };
+
+exports.app_show_handler = spid_controller.application_details_spid;
