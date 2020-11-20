@@ -1,13 +1,13 @@
 <div class="panel panel-default info">
   <div class="panel-heading">
-      <span class="title"><i class="far fa-id-card"></i><%=translations.spid.application.spid_credentials%></span>
+      <span class="title"><i class="far fa-id-card"></i><%=spid_translation.spid.application.spid_credentials%></span>
       <div class="table_actions clearfix">
           <div class="btn-group">
               <a href="#" class="small">
                   <button title="Add" class="btn btn-default btn-sm">
                       <i class="fa fa-edit"></i>
                       <span class="action">
-                          Show/Edit
+                        <%=translation.applications.show.edit_btn%>
                       </span>
                   </button>
               </a>
@@ -16,7 +16,7 @@
   </div>
   <div class="panel-body">
       <div class="spid_id">
-          <h5><%=translations.spid.application.metadata%></h5>
+          <h5><%=spid_translation.spid.application.metadata%></h5>
           <p><%=metadata%></p>
       </div>
   </div>

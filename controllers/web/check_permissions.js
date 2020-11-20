@@ -1,7 +1,7 @@
 const models = require('../../models/models.js');
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
-const module_loader = require('../../lib/moduleLoader');
+const plugin_loader = require('../../lib/pluginLoader');
 
 const debug = require('debug')('idm:web-check_permissions_controller');
 
@@ -95,14 +95,13 @@ exports.owned_permissions = function (req, res, next) {
 // - 6 Get and assign only public owned roles
 function check_user_action(application, path, method, permissions) {
   // Checking if some module needs to bypass default permissions
-  const mods = module_loader.loadModules();
-  for (const mod in mods) {
-    if (
-      Object.prototype.hasOwnProperty.call(mods, mod) &&
-      Object.prototype.hasOwnProperty.call(mods[mod], 'check_user_action')
-    ) {
-      if (mods[mod].check_user_action(application, path, method, permissions)) {
-        return true;
+  const plugins = plugin_loader.loadModules();
+  for (const plug in plugins) {
+    if (Object.prototype.hasOwnProperty.call(plugins, plug)) {
+      if (Object.prototype.hasOwnProperty.call(plugins[plug], 'check_user_action')) {
+        if (plugins[plug].check_user_action(application, path, method, permissions)) {
+          return true;
+        }
       }
     }
   }

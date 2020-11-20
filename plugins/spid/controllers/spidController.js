@@ -139,8 +139,7 @@ exports.application_step_spid = (req, res) => {
 };
 
 // POST: /idm/applications/:id/step/spid
-exports.application_save_spid = async (req, res, next) => {
-  
+exports.application_save_spid = async (req, res) => {
   if( !req.body.spid_enabled){
     req.session.skipSPID = true;
     return res.redirect('/idm/applications/' + req.application.id + '/step/avatar');
@@ -204,27 +203,6 @@ exports.application_details_spid = async (req, res, next) => {
   const credentials = await spid_models.spid_credentials.findOne({
     where: { application_id: req.params.application_id }
   });
-  
-  if (!res.locals.module_parts) {
-    res.locals.module_parts = [];
-  }
-  
-  if (credentials) {
-    res.locals.module_parts.push(
-      render(
-        fs.readFileSync(path.resolve('./modules/spid//views/spid_details.ejs'), { encoding: 'utf-8' }).toString(),
-        credentials
-      )
-    );
-  }
-  next();
-};
-
-// GET: /idm/applications/:id
-exports.application_details_spid = async (req, res, next) => {
-  const credentials = await spid_models.spid_credentials.findOne({
-    where: { application_id: req.params.application_id }
-  });
 
   if (!res.locals.module_parts) {
     res.locals.module_parts = [];
@@ -237,7 +215,8 @@ exports.application_details_spid = async (req, res, next) => {
         {
           credentials,
           metadata: `${config.spid.gateway_host}/spid/${credentials.application_id}/metadata`,
-          translations: req.app.locals.spid_translation
+          translation: req.app.locals.translation,
+          spid_translation: req.app.locals.spid_translation,
         }
       )
     );

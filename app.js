@@ -163,12 +163,15 @@ app.use(function (req, res, next) {
   next();
 });
 
-// Check modules and install it...
-const module_loader = require('./lib/moduleLoader');
-const mods = module_loader.loadModules(path.resolve('./modules'));
-for (const mod in mods) {
-  if (Object.prototype.hasOwnProperty.call(mods, mod)) {
-    mods[mod].install(app, config);
+// Check for plugins and install it...
+const fs = require('fs');
+if (fs.existsSync(path.resolve('./plugins'))) {
+  const plugins_loader = require('./lib/pluginLoader');
+  const plugins = plugins_loader.loadPlugins(path.resolve('./plugins'));
+  for (const plug in plugins) {
+    if (Object.prototype.hasOwnProperty.call(plugins, plug)) {
+      plugins[plug].install(app, config);
+    }
   }
 }
 
