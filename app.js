@@ -198,7 +198,11 @@ for (const plug in plugins) {
 
     // Adding plugin's routes
     if (plugins[plug].router) {
-      app.use(`/${plug}`, plugins[plug].router);
+      if (config.https.enabled) {
+        app.use(`/${plug}`, force_ssl, plugins[plug].router);
+      } else {
+        app.use(`/${plug}`, plugins[plug].router);
+      }
     }
 
     // Call install method

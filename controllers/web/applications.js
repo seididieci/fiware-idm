@@ -314,6 +314,18 @@ exports.new = function (req, res, next) {
     });
 };
 
+// POST /idm/applications/:application_id/next_step -- Next Step application
+exports.next_step = function (req, res) {
+  if (req.session.app_new_steps.length > 0) {
+    const url = req.session.app_new_steps.shift();
+    res.redirect(url.replace(':application_id', req.application.id));
+  } else if (config.eidas && req.body.eidas === 'eidas') {
+    res.redirect('/idm/applications/' + req.application.id + '/step/eidas');
+  } else {
+    res.redirect('/idm/applications/' + req.application.id + '/step/avatar');
+  }
+};
+
 // POST /idm/applications -- Create application
 exports.create = function (req, res, next) {
   debug('--> create');
@@ -436,11 +448,15 @@ exports.create = function (req, res, next) {
 
   return Promise.all([save, assign])
     .then(function () {
-      if (config.eidas && req.body.eidas === 'eidas') {
-        res.redirect('/idm/applications/' + application.id + '/step/eidas');
-      } else {
-        res.redirect('/idm/applications/' + application.id + '/step/avatar');
-      }
+      // if (req.session.app_new_steps.length > 0) {
+      //   const url = req.session.app_new_steps.shift();
+      //   res.redirect(url.replace(":application_id", application.id));
+      // } else if (config.eidas && req.body.eidas === 'eidas') {
+      //   res.redirect('/idm/applications/' + application.id + '/step/eidas');
+      // } else {
+      //   res.redirect('/idm/applications/' + application.id + '/step/avatar');
+      // }
+      res.redirect('/idm/applications/' + application.id + '/next_step');
     })
     .catch(function (error) {
       debug('Error: ', error);
