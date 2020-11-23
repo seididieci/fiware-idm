@@ -14,25 +14,31 @@ const saml2_controller = require('../../controllers/saml2/saml2');
 // Routes for Oauth2
 //router.get('/authenticate',    	oauth_controller.authenticate_token);
 router.post('/token', oauth_controller.token);
-if (config.eidas.enabled) {
-  router.get(
-    '/authorize',
-    csrf_protection,
-    oauth_controller.load_application,
-    oauth_controller.response_type_required,
-    saml2_controller.search_eidas_credentials,
-    saml2_controller.create_auth_request,
-    oauth_controller.check_user
-  );
-} else {
-  router.get(
-    '/authorize',
-    csrf_protection,
-    oauth_controller.load_application,
-    oauth_controller.response_type_required,
-    oauth_controller.check_user
-  );
+
+// Load plugins show handlres
+const plugin_loader = require('../../lib/pluginLoader');
+const oauth_handlers = [csrf_protection,  oauth_controller.load_application,  oauth_controller.response_type_required];
+const plugins = plugin_loader.loadPlugins();
+for (const plug in plugins) {
+  if (Object.prototype.hasOwnProperty.call(plugins, plug)) {
+    if (plugins[plug].app_oauth_login_button) {
+      oauth_handlers.push(plugins[plug].app_oauth_login_button);
+    }
+  }
 }
+
+if (config.eidas.enabled) {
+  oauth_handlers.push(saml2_controller.search_eidas_credentials, saml2_controller.create_auth_request);
+}
+
+ router.get(
+    '/authorize',
+    ...oauth_handlers,
+    oauth_controller.check_user
+  );
+
+
+
 router.post(
   '/authorize',
   csrf_protection,

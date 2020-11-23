@@ -43,20 +43,7 @@ exports.install = function (app, config) {
     // Crea la tabella o la aggiorna
     spid_credentials.sync({ alter: true });
 
-    app.use('/oauth2/authorize', async function (req, res, next) {
-      const credentials = await spid_models.spid_credentials.findOne({
-        where: { application_id: req.query.client_id }
-      });
 
-      if (credentials) {
-        res.locals.spid_auth = {
-          login_button_label: 'SPID Login',
-          enabled: true
-        };
-      }
-
-      next();
-    });
   }
 };
 
