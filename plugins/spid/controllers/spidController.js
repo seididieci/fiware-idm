@@ -197,6 +197,27 @@ exports.application_save_spid = async (req, res) => {
     });
   }
 };
+// GET: /oauth2/authorize
+exports.application_login_button_spid = async (req, res, next) => {
+  const credentials = await spid_models.spid_credentials.findOne({
+    where: { application_id: req.application.id }
+  });
+
+  if (!res.locals.plugin_parts) {
+    res.locals.plugin_parts = [];
+  }
+
+  if (credentials) {
+    res.locals.plugin_parts.push(path.resolve('./plugins/spid/views/spid_button.ejs'));
+    res.locals.spid_auth = {
+      login_button_label: 'SPID Login',
+      enabled: true
+    };
+  }
+
+  next();
+};
+
 
 // GET: /idm/applications/:id
 exports.application_details_spid = async (req, res, next) => {

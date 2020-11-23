@@ -4,9 +4,14 @@ const spid_app_route = require('./routes/spidAppRoutes.js');
 const debug = require('debug')('spid:module');
 const spid_models = require('./models/models.js');
 const spid_controller = require('./controllers/spidController');
+const express = require('express');
+const path = require('path');
 
 exports.install = function (app, config) {
   if (config.spid.enabled) {
+
+    app.use("/static/plugins/spid", express.static(path.join(__dirname, 'public')));
+
     app.use((req, res, next) => {
       // Se devo saltare lo spid
       if (req.session.skipSPID) {
@@ -65,3 +70,4 @@ exports.check_user_action = function (application, path, method, permissions) {
 };
 
 exports.app_show_handler = spid_controller.application_details_spid;
+exports.app_oauth_login_button = spid_controller.application_login_button_spid;
