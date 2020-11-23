@@ -34,12 +34,19 @@ exports.spid_login = async (req, res, next) => {
   debug('--> spid_login');
 
   //FIXME: se popolata la form di inserimento credenziali, il dato arriva qui (ma non è una soluzione pulita...)
-  const credentials = await spid_models.spid_credentials.findOne({
-    where: { application_id: req.query.client_id }
-  });
 
   try {
+    const credentials = await spid_models.spid_credentials.findOne({
+      where: { application_id: req.query.client_id }
+    });
+
     if (credentials) {
+      // idp scelto dall'utente
+      const idp = config.spid.idp_list.find((i) => i.id === req.query.idp);
+      if (!idp) {
+        throw new Error('Invalid SPID IDP');
+      }
+
       //crete service Provider
       const sp_options = get_sp_options(credentials);
 
@@ -208,6 +215,7 @@ exports.application_login_button_spid = async (req, res, next) => {
   }
 
   if (credentials) {
+    res.locals.spid_idp_list = config.spid.idp_list;
     res.locals.plugin_parts.push(path.resolve('./plugins/spid/views/spid_button.ejs'));
     res.locals.spid_auth = {
       login_button_label: 'SPID Login',
@@ -217,7 +225,6 @@ exports.application_login_button_spid = async (req, res, next) => {
 
   next();
 };
-
 
 // GET: /idm/applications/:id
 exports.application_details_spid = async (req, res, next) => {

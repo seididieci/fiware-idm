@@ -160,6 +160,78 @@ config.spid = {
   enabled: true,
   gateway_host: 'http://localhost:3000',
   node_host: 'http://localhost:8088',
+  idp_list: [
+    {
+      id: 'testid',
+      entity_id: 'http://localhost:8088',
+      name: 'SPID di test',
+      login_url: 'http://localhost:8088/sso',
+      logout_url: 'http://localhost:8088/slo'
+    },
+    {
+      id: 'arubaid',
+      entity_id: 'http://localhost:8088',
+      name: 'Aruba ID',
+      login_url: 'http://localhost:8088/sso',
+      logout_url: 'http://localhost:8088/slo'
+    },
+    {
+      id: 'infocertid',
+      entity_id: 'http://localhost:8088',
+      name: 'Infocert ID',
+      login_url: 'http://localhost:8088/sso',
+      logout_url: 'http://localhost:8088/slo'
+    },
+    {
+      id: 'intesaid',
+      entity_id: 'http://localhost:8088',
+      name: 'Intesa ID',
+      login_url: 'http://localhost:8088/sso',
+      logout_url: 'http://localhost:8088/slo'
+    },
+    {
+      id: 'lepidaid',
+      entity_id: 'http://localhost:8088',
+      name: 'Lepida ID',
+      login_url: 'http://localhost:8088/sso',
+      logout_url: 'http://localhost:8088/slo'
+    },
+    {
+      id: 'namirialid',
+      entity_id: 'http://localhost:8088',
+      name: 'Namirial ID',
+      login_url: 'http://localhost:8088/sso',
+      logout_url: 'http://localhost:8088/slo'
+    },
+    {
+      id: 'posteid',
+      entity_id: 'http://localhost:8088',
+      name: 'Poste ID',
+      login_url: 'http://localhost:8088/sso',
+      logout_url: 'http://localhost:8088/slo'
+    },
+    {
+      id: 'sielteid',
+      entity_id: 'http://localhost:8088',
+      name: 'Sielte ID',
+      login_url: 'http://localhost:8088/sso',
+      logout_url: 'http://localhost:8088/slo'
+    },
+    {
+      id: 'spiditalia',
+      entity_id: 'http://localhost:8088',
+      name: 'SPIDItalia Register.it',
+      login_url: 'http://localhost:8088/sso',
+      logout_url: 'http://localhost:8088/slo'
+    },
+    {
+      id: 'timid',
+      entity_id: 'http://localhost:8088',
+      name: 'Tim ID',
+      login_url: 'http://localhost:8088/sso',
+      logout_url: 'http://localhost:8088/slo'
+    }
+  ]
 };
 
 // Enables the possibility of adding identity attributes in users' profile

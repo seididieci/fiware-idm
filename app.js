@@ -196,6 +196,11 @@ for (const plug in plugins) {
       );
     }
 
+    // Adding plugin's routes
+    if (plugins[plug].router) {
+      app.use(`/${plug}`, plugins[plug].router);
+    }
+
     // Call install method
     plugins[plug].install(app, config);
   }
