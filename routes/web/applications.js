@@ -67,7 +67,7 @@ router.get('/available', csrf_protection, web_trusted_apps_controller.available_
 router.get('/', csrf_protection, web_app_controller.index);
 router.get('/filtered_user', csrf_protection, web_app_controller.filter_user);
 router.get('/filtered_organization', csrf_protection, web_app_controller.filter_organization);
-router.get('/new', csrf_protection, ...plugins_handlers.app_new, web_app_controller.new);
+router.get('/new', csrf_protection, web_app_controller.new);
 router.get('/:application_id/next_step', csrf_protection, web_app_controller.next_step);
 router.post('/', csrf_protection, web_app_controller.create);
 router.get('/:application_id/authorized_users', csrf_protection, web_app_controller.authorized_users);

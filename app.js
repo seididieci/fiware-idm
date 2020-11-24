@@ -163,7 +163,7 @@ app.use(function (req, res, next) {
   next();
 });
 
-// Check for plugins and install it...
+// Check and enable plugins...
 const fs = require('fs');
 const plugins_loader = require('./lib/pluginLoader');
 const plugins = plugins_loader.loadPlugins();

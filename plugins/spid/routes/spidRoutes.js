@@ -10,7 +10,7 @@ router.param('application_id', index_controller.applications.load_application);
 
 // Routes for SPID application creation/manipulation
 router.get(
-  '/applications/:application_id/step',
+  '/applications/:application_id/configure_spid',
   index_controller.sessions.login_required,
   index_controller.sessions.password_check_date,
   index_controller.check_permissions.owned_permissions,
@@ -18,7 +18,7 @@ router.get(
   spid_controller.application_step_spid
 );
 router.post(
-  '/applications/:application_id/step',
+  '/applications/:application_id/configure_spid',
   index_controller.sessions.login_required,
   index_controller.sessions.password_check_date,
   index_controller.check_permissions.owned_permissions,

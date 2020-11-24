@@ -148,7 +148,6 @@ exports.application_step_spid = (req, res) => {
 // POST: /idm/applications/:id/step/spid
 exports.application_save_spid = async (req, res) => {
   if (!req.body.spid_enabled) {
-    req.session.skipSPID = true;
     return res.redirect('/idm/applications/' + req.application.id + '/next_step');
   }
 
@@ -202,15 +201,6 @@ exports.application_save_spid = async (req, res) => {
       csrf_token: req.csrfToken()
     });
   }
-};
-
-exports.application_new = (req, res, next) => {
-  if (!req.session.app_new_steps) {
-    req.session.app_new_steps = [];
-  }
-  req.session.app_new_steps.push('/spid/applications/:application_id/step');
-
-  next();
 };
 
 // GET: /oauth2/authorize

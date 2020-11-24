@@ -21,7 +21,8 @@ exports.install = function (app, config) {
 // - 5 Get and assign all public application roles
 // - 6 Get and assign only public owned roles
 exports.check_user_action = function (application, path, method, permissions) {
-  if (path.endsWith('/step') && method === 'POST') {
+  // FIXME: Weak control over path...
+  if (path.endsWith('/configure_spid') && method === 'POST') {
     if (permissions.includes('2')) {
       return true;
     }
@@ -30,7 +31,7 @@ exports.check_user_action = function (application, path, method, permissions) {
   return false;
 };
 
-exports.app_new_handler = spid_controller.application_new;
+exports.app_new_steps = ['/spid/applications/:application_id/configure_spid'];
 exports.app_show_handler = spid_controller.application_details_spid;
 exports.app_oauth_login_button = spid_controller.application_login_button_spid;
 exports.router = spid_route;
