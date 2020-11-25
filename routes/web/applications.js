@@ -7,6 +7,21 @@ const csrf = require('csurf');
 const csrf_protection = csrf({ cookie: true });
 const fs = require('fs');
 
+// Load plugins handlers
+const plugin_loader = require('../../lib/pluginLoader');
+const plugins = plugin_loader.loadPlugins();
+const plugins_handlers = { app_new: [], app_show: [] };
+for (const plug in plugins) {
+  if (Object.prototype.hasOwnProperty.call(plugins, plug)) {
+    if (plugins[plug].app_show_handler) {
+      plugins_handlers.app_show.push(plugins[plug].app_show_handler);
+    }
+    if (plugins[plug].app_new_handler) {
+      plugins_handlers.app_new.push(plugins[plug].app_new_handler);
+    }
+  }
+}
+
 // Config file
 const config = require('../../config');
 
@@ -53,6 +68,7 @@ router.get('/', csrf_protection, web_app_controller.index);
 router.get('/filtered_user', csrf_protection, web_app_controller.filter_user);
 router.get('/filtered_organization', csrf_protection, web_app_controller.filter_organization);
 router.get('/new', csrf_protection, web_app_controller.new);
+router.get('/:application_id/next_step', csrf_protection, web_app_controller.next_step);
 router.post('/', csrf_protection, web_app_controller.create);
 router.get('/:application_id/authorized_users', csrf_protection, web_app_controller.authorized_users);
 router.get('/:application_id/authorized_organizations', csrf_protection, web_app_controller.authorized_organizations);
@@ -62,21 +78,24 @@ router.get(
   web_trusted_apps_controller.get_trusted_applications
 );
 
-// Load plugins show handlres
-const plugin_loader = require('../../lib/pluginLoader');
-const show_handlers = [web_check_perm_controller.owned_permissions, csrf_protection];
-const plugins = plugin_loader.loadPlugins();
-for (const plug in plugins) {
-  if (Object.prototype.hasOwnProperty.call(plugins, plug)) {
-    if (plugins[plug].app_show_handler) {
-      show_handlers.push(plugins[plug].app_show_handler);
-    }
-  }
+if (config.eidas.enabled) {
+  router.get(
+    '/:application_id',
+    web_check_perm_controller.owned_permissions,
+    csrf_protection,
+    saml2_controller.search_eidas_credentials,
+    ...plugins_handlers.app_show,
+    web_app_controller.show
+  );
+} else {
+  router.get(
+    '/:application_id',
+    web_check_perm_controller.owned_permissions,
+    csrf_protection,
+    ...plugins_handlers.app_show,
+    web_app_controller.show
+  );
 }
-if (config.eidas) {
-  show_handlers.push(saml2_controller.search_eidas_credentials);
-}
-router.get('/:application_id', ...show_handlers, web_app_controller.show);
 
 router.get(
   '/:application_id/step/avatar',

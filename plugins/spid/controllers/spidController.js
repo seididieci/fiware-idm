@@ -160,7 +160,7 @@ exports.validateResponse = async (req, res, next) => {
   }
 };
 
-// GET: /idm/applications/:id/step/spid
+// GET: /spid/applications/:application_id/step
 exports.application_step_spid = (req, res) => {
   res.render('../plugins/spid/views/step_spid.ejs', {
     spid_enabled: false,
@@ -174,8 +174,7 @@ exports.application_step_spid = (req, res) => {
 // POST: /idm/applications/:id/step/spid
 exports.application_save_spid = async (req, res) => {
   if (!req.body.spid_enabled) {
-    req.session.skipSPID = true;
-    return res.redirect('/idm/applications/' + req.application.id + '/step/avatar');
+    return res.redirect('/idm/applications/' + req.application.id + '/next_step');
   }
 
   const credentials = req.body.spid_credentials;
@@ -203,8 +202,7 @@ exports.application_save_spid = async (req, res) => {
     await new_value.validate();
     await new_value.save();
     await generate_app_certificates(req.application.id, new_value);
-    req.session.skipSPID = true;
-    return res.redirect('/idm/applications/' + req.application.id + '/step/avatar');
+    return res.redirect('/idm/applications/' + req.application.id + '/next_step');
   } catch (error) {
     debug('Error: ', error);
 
@@ -230,6 +228,7 @@ exports.application_save_spid = async (req, res) => {
     });
   }
 };
+
 // GET: /oauth2/authorize
 exports.application_login_button_spid = async (req, res, next) => {
   const credentials = await spid_models.spid_credentials.findOne({

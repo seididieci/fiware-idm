@@ -290,6 +290,17 @@ exports.authorized_organizations = function (req, res) {
 exports.new = function (req, res, next) {
   debug('--> new');
 
+  req.session.app_new_steps = [];
+  for (const plug_name in req.app.plugins) {
+    if (Object.prototype.hasOwnProperty.call(req.app.plugins, plug_name)) {
+      const plug = req.app.plugins[plug_name];
+      if (plug.app_new_steps && plug.app_new_steps.length > 0) {
+        req.session.app_new_steps.push(...plug.app_new_steps);
+      }
+    }
+  }
+  req.app.locals.tot_plugin_steps = req.session.app_new_steps.length;
+
   models.user_organization
     .findAll({
       where: { user_id: req.session.user.id, role: 'owner' },
@@ -312,6 +323,18 @@ exports.new = function (req, res, next) {
     .catch(function (error) {
       next(error);
     });
+};
+
+// POST /idm/applications/:application_id/next_step -- Next Step application
+exports.next_step = function (req, res) {
+  if (req.session.app_new_steps.length > 0) {
+    const url = req.session.app_new_steps.shift();
+    res.redirect(url.replace(':application_id', req.application.id));
+  } else if (config.eidas && req.body.eidas === 'eidas') {
+    res.redirect('/idm/applications/' + req.application.id + '/step/eidas');
+  } else {
+    res.redirect('/idm/applications/' + req.application.id + '/step/avatar');
+  }
 };
 
 // POST /idm/applications -- Create application
@@ -436,11 +459,15 @@ exports.create = function (req, res, next) {
 
   return Promise.all([save, assign])
     .then(function () {
-      if (config.eidas && req.body.eidas === 'eidas') {
-        res.redirect('/idm/applications/' + application.id + '/step/eidas');
-      } else {
-        res.redirect('/idm/applications/' + application.id + '/step/avatar');
-      }
+      // if (req.session.app_new_steps.length > 0) {
+      //   const url = req.session.app_new_steps.shift();
+      //   res.redirect(url.replace(":application_id", application.id));
+      // } else if (config.eidas && req.body.eidas === 'eidas') {
+      //   res.redirect('/idm/applications/' + application.id + '/step/eidas');
+      // } else {
+      //   res.redirect('/idm/applications/' + application.id + '/step/avatar');
+      // }
+      res.redirect('/idm/applications/' + application.id + '/next_step');
     })
     .catch(function (error) {
       debug('Error: ', error);

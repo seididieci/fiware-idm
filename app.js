@@ -163,7 +163,7 @@ app.use(function (req, res, next) {
   next();
 });
 
-// Check for plugins and install it...
+// Check and enable plugins...
 const fs = require('fs');
 const plugins_loader = require('./lib/pluginLoader');
 const plugins = plugins_loader.loadPlugins();
@@ -198,7 +198,11 @@ for (const plug in plugins) {
 
     // Adding plugin's routes
     if (plugins[plug].router) {
-      app.use(`/${plug}`, plugins[plug].router);
+      if (config.https.enabled) {
+        app.use(`/${plug}`, force_ssl, plugins[plug].router);
+      } else {
+        app.use(`/${plug}`, plugins[plug].router);
+      }
     }
 
     // Call install method
