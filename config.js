@@ -159,77 +159,66 @@ config.eidas = {
 config.spid = {
   enabled: true,
   gateway_host: 'http://localhost:3000',
-  node_host: 'http://localhost:8088',
   idp_list: [
     {
       id: 'testid',
       entity_id: 'http://localhost:8088',
       name: 'SPID di test',
-      login_url: 'http://localhost:8088/sso',
-      logout_url: 'http://localhost:8088/slo'
+      meta_url:"http://localhost:8088/metadata",
     },
     {
       id: 'arubaid',
-      entity_id: 'http://localhost:8088',
+      entity_id: 'https://loginspid.aruba.it',
       name: 'Aruba ID',
-      login_url: 'http://localhost:8088/sso',
-      logout_url: 'http://localhost:8088/slo'
+      meta_url:"https://loginspid.aruba.it/metadata",
     },
     {
       id: 'infocertid',
-      entity_id: 'http://localhost:8088',
+      entity_id: 'https://identity.infocert.it',
       name: 'Infocert ID',
-      login_url: 'http://localhost:8088/sso',
-      logout_url: 'http://localhost:8088/slo'
+      meta_url:"https://identity.infocert.it/metadata/metadata.xml",
     },
     {
       id: 'intesaid',
-      entity_id: 'http://localhost:8088',
+      entity_id: 'https://spid.intesa.it',
       name: 'Intesa ID',
-      login_url: 'http://localhost:8088/sso',
-      logout_url: 'http://localhost:8088/slo'
+      meta_url:"https://spid.intesa.it/metadata/metadata.xml",
     },
     {
       id: 'lepidaid',
-      entity_id: 'http://localhost:8088',
+      entity_id: 'https://id.lepida.it/idp/shibboleth',
       name: 'Lepida ID',
-      login_url: 'http://localhost:8088/sso',
-      logout_url: 'http://localhost:8088/slo'
+      meta_url:"https://id.lepida.it/idp/shibboleth",
     },
     {
       id: 'namirialid',
-      entity_id: 'http://localhost:8088',
+      entity_id: 'https://idp.namirialtsp.com/idp',
       name: 'Namirial ID',
-      login_url: 'http://localhost:8088/sso',
-      logout_url: 'http://localhost:8088/slo'
+      meta_url:"https://idp.namirialtsp.com/idp/metadata",
     },
     {
       id: 'posteid',
-      entity_id: 'http://localhost:8088',
+      entity_id: 'https://posteid.poste.it',
       name: 'Poste ID',
-      login_url: 'http://localhost:8088/sso',
-      logout_url: 'http://localhost:8088/slo'
+      meta_url:"https://posteid.poste.it/jod-fs/metadata/metadata.xml",
     },
     {
       id: 'sielteid',
-      entity_id: 'http://localhost:8088',
+      entity_id: 'https://identity.sieltecloud.it',
       name: 'Sielte ID',
-      login_url: 'http://localhost:8088/sso',
-      logout_url: 'http://localhost:8088/slo'
+      meta_url:"https://identity.sieltecloud.it/simplesaml/metadata.xml",
     },
     {
       id: 'spiditalia',
-      entity_id: 'http://localhost:8088',
+      entity_id: 'https://spid.register.it',
       name: 'SPIDItalia Register.it',
-      login_url: 'http://localhost:8088/sso',
-      logout_url: 'http://localhost:8088/slo'
+      meta_url:"https://spid.register.it/login/metadata",
     },
     {
       id: 'timid',
-      entity_id: 'http://localhost:8088',
+      entity_id: 'https://login.id.tim.it/affwebservices/public/saml2sso',
       name: 'Tim ID',
-      login_url: 'http://localhost:8088/sso',
-      logout_url: 'http://localhost:8088/slo'
+      meta_url:"https://login.id.tim.it/spid-services/MetadataBrowser/idp",
     }
   ]
 };

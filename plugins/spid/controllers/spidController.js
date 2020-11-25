@@ -11,6 +11,8 @@ const config_service = require('../../../lib/configService.js');
 const config = config_service.get_config();
 const gravatar = require('gravatar');
 // const { render } = require('ejs');
+const xmldom = require('xmldom');
+
 
 // Keep request in-memory
 // TODO: This should be moved in the db if we have to restart the server or make the service h-scalable
@@ -24,11 +26,11 @@ exports.get_metadata = async (req, res) => {
 
   const sp_options = get_sp_options(credentials);
 
-  const sp = new ServiceProvider(sp_options);
-  const metadata = sp.genersate_metadata();
+  const sp = new ServiceProvider({sp: sp_options});
+  const metadata = sp.generate_metadata();
 
   res.send(metadata);
-};
+}
 
 exports.spid_login = async (req, res, next) => {
   debug('--> spid_login');
@@ -49,8 +51,13 @@ exports.spid_login = async (req, res, next) => {
 
       //crete service Provider
       const sp_options = get_sp_options(credentials);
+      const idp_options = await get_idp_options(idp);
 
-      const sp = new ServiceProvider(sp_options);
+      const sp = new ServiceProvider({
+        sp: sp_options,
+        idp: idp_options,
+        signature_algorithm: 'sha512',
+      });
       const auth_req = sp.create_authn_request();
       const url = await sp.get_request_url(auth_req.xml);
 
@@ -58,7 +65,8 @@ exports.spid_login = async (req, res, next) => {
         client_id: credentials.application_id,
         state: req.query.state,
         response_type: req.query.response_type,
-        redirect_uri: req.query.redirect_uri
+        redirect_uri: req.query.redirect_uri,
+        idp_id: req.query.idp
       };
 
       // Redirect to SPID IdP
@@ -70,7 +78,7 @@ exports.spid_login = async (req, res, next) => {
     debug(err);
     req.next(err);
   }
-};
+}
 
 exports.validateResponse = async (req, res, next) => {
   debug('--> spid_response');
@@ -79,10 +87,33 @@ exports.validateResponse = async (req, res, next) => {
     const credentials = await spid_models.spid_credentials.findOne({
       where: { application_id: req.params.clientId }
     });
-
     const sp_options = get_sp_options(credentials);
 
-    const sp = new ServiceProvider(sp_options);
+    // Recupero il documento xml
+    const xml = Buffer.from(req.body.SAMLResponse, 'base64').toString('utf8');
+    const parser = new xmldom.DOMParser();
+    const doc = parser.parseFromString(xml);
+
+    // Checking response_to that should be one of my requests
+    const response_to = doc.documentElement.getAttributeNode("InResponseTo").value;
+    if (!requests[response_to]) {
+      throw new Error('Unknow authentication request!');
+    }
+    
+    // idp scelto dall'utente
+    const idp = config.spid.idp_list.find((i) => i.id === requests[response_to].idp_id);
+    if (!idp) {
+      throw new Error('Invalid SPID IDP');
+    }
+    const idp_options = await get_idp_options(idp);
+    
+    const sp = new ServiceProvider({
+      sp: sp_options,
+      idp: idp_options,
+      signature_algorithm: 'sha512',
+    });
+    
+
     const resp_data = await sp.validate_response(req.body);
 
     // The name_id will change at avery login (it is forced to be transinet by SPID regultaions)
@@ -91,12 +122,7 @@ exports.validateResponse = async (req, res, next) => {
 
     // SPID Has a session_index that will be needed for logout user from his sesssion
     // const session_index = resp_data.user.session_index;
-
-    // Checking response_to that should be one of my requests
-    const response_to = resp_data.response_header.in_response_to;
-    if (!requests[response_to]) {
-      throw new Error('Unknow authentication request!');
-    }
+    
 
     const spid_profile = {};
     for (const key in resp_data.user.attributes) {
@@ -243,12 +269,132 @@ exports.application_details_spid = async (req, res, next) => {
   }
 
   next();
+}
+
+async function get_idp_options(idp) {
+
+    const client = require((idp.meta_url.startsWith("https"))?'https':'http')
+    
+    let response = await new Promise((res, rej) => {
+      
+      let output = '';
+      
+      const req = client.get(idp.meta_url, response => {
+
+        if(response.statusCode != 200){
+          throw new Error('Error in idp connection');
+        }
+        
+        response.on('data', chunk => {     
+          output+=chunk;
+        })
+
+        response.on('end', function () {
+          res(output);
+        });
+      })
+      
+      req.on('error', error => {
+        console.error(error)
+      })
+      
+      req.end()
+    });
+
+
+    // Recupero il documento xml
+    const xml = response.toString('utf8');
+    const parser = new xmldom.DOMParser();
+    const doc = parser.parseFromString(xml);
+
+    // L'elemento <IDPSSODescriptor> specifico che contraddistingue l’entità di tipo Identity Provider
+    const idp_sso_descriptor = doc.getElementsByTagName("md:IDPSSODescriptor");
+
+    // WantAuthnRequestSigned: attributo con valore booleano che impone ai Service Provider che fanno 
+    // uso di questo Identity provider l’obbligo della firma delle richieste di autenticazione;
+    const sign_get_request = (idp_sso_descriptor[0].getAttributeNode('WantAuthnRequestsSigned')?.value === 'true');
+
+
+    // l’elemento <KeyDescriptor> che contiene l’elenco dei certificati e delle corrispondenti chiavi pubbliche dell’entità, utili per 
+    // la verifica della firma dei messaggi prodotti da tale entità nelle sue interazioni con le altre (SAMLMetadata, par. 2.4.1.1)
+    var key_descriptor_coll = searchTree(idp_sso_descriptor[0], 'md:KeyDescriptor');
+    if(!key_descriptor_coll || !key_descriptor_coll[0]){
+      throw new Error('Invalid SSO certificates');
+    }
+    const key_descriptor_singning_coll = key_descriptor_coll.filter((i) => (!i.getAttributeNode("use") || i.getAttributeNode("use").value != 'encryption'));
+    if(!key_descriptor_singning_coll || !key_descriptor_singning_coll[0]){
+      throw new Error('Invalid SSO certificates');
+    }
+
+    const certificates = [];
+    key_descriptor_singning_coll.forEach(element => {
+      Array.prototype.push.apply(certificates, searchTree(element, 'ds:X509Certificate').map(i => i.textContent));
+    });
+    
+
+
+
+    //uno o più elementi <SingleSignOnService> che specificano l’indirizzo del Single Sign-On Service riportanti i seguenti attributi:
+    //Location URL endpoint del servizio per la ricezione delle richieste
+    //Binding che può assumere uno dei valori
+    //urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect
+    //urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST
+    const sso_login_url_coll = searchTree(idp_sso_descriptor[0], "md:SingleSignOnService")
+    if(!sso_login_url_coll){
+        throw new Error('Invalid SSO Login url');
+    }
+    const sso_login_url_node = sso_login_url_coll.find(i => i.getAttributeNode('Binding')?.nodeValue=="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect");
+    if(!sso_login_url_node){
+      throw new Error('Invalid SSO Login url');
+    }
+    const sso_login_url = sso_login_url_node.getAttributeNode('Location').nodeValue;
+
+    // uno o più elementi <SingleLogoutService> che specificano l’indirizzo del Single Logout Service riportanti i seguenti attributi:
+    // Location URL endpoint del servizio per la ricezione delle richieste di Single Logout;
+    // Binding che può assumere uno dei valori
+    // urn:oasis:names:tc:SAML:2.0:bindings:SOAP
+    // urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect
+    // urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST
+    const sso_logout_url_coll = searchTree(idp_sso_descriptor[0], "md:SingleLogoutService")
+    if(!sso_logout_url_coll){
+      throw new Error('Invalid Single Logout url');
+    }
+    const sso_logout_url_node = sso_logout_url_coll.find(i => i.getAttributeNode('Binding')?.nodeValue=="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect");
+    if(!sso_login_url_node){
+      throw new Error('Invalid SSO Logout url');
+    }      
+    const sso_logout_url = sso_logout_url_node.getAttributeNode('Location').nodeValue;
+
+    return {
+      sso_login_url: sso_login_url,
+      sso_logout_url: sso_logout_url,
+      certificates: certificates,
+      force_authn: false,
+      sign_get_request: sign_get_request,//FIXME: deve essere gestito all'interno della libreria 
+      allow_unencrypted_assertion: true,
+      entity_id: idp.entity_id
+    };
 };
+
+function searchTree(element, matchingTitle){
+  if(element.nodeName == matchingTitle){
+       return [element];
+  }else if (element.childNodes != null){
+       var i;
+       var result = [];
+       for(i=0; i < element.childNodes.length; i++){
+            let rec = searchTree(element.childNodes[i], matchingTitle);
+            if(rec){
+              Array.prototype.push.apply(result, rec);
+            }
+       }
+       return result;
+  }
+  return null;
+}
 
 function get_sp_options(credentials) {
   return {
-    signature_algorithm: 'sha512',
-    sp: {
       entity_id: `${config.spid.gateway_host}/spid/${credentials.application_id}/metadata`,
       private_key: fs.readFileSync(`./certs/applications/spid/${credentials.application_id}-key.pem`, 'utf-8'),
       certificate: fs.readFileSync(`./certs/applications/spid/${credentials.application_id}-cert.pem`, 'utf-8'),
@@ -262,7 +408,7 @@ function get_sp_options(credentials) {
         class_refs: [credentials.auth_context_cref]
       },
       nameid_format: 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient',
-      sign_get_request: true,
+      //sign_get_request: true, 
       allow_unencrypted_assertion: true,
       // Custom
       organization: {
@@ -276,34 +422,6 @@ function get_sp_options(credentials) {
         name: credentials.attributes_list.name,
         values: credentials.attributes_list.values
       }
-    },
-    idp: {
-      //TODO: cambia con i security provider
-      sso_login_url: 'http://localhost:8088/sso',
-      sso_logout_url: 'http://localhost:8088/slo',
-      certificates: [
-        `MIIC+zCCAeOgAwIBAgIUeYWcwo2OxQ7mdjwhb3FsSylBs/EwDQYJKoZIhvcNAQEL
-         BQAwDTELMAkGA1UEBhMCSVQwHhcNMjAxMDI4MTEzNjIxWhcNMjAxMTI3MTEzNjIx
-         WjANMQswCQYDVQQGEwJJVDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
-         ANIz6ELcW42s8tit/+5XiZn4eknpywvPPx1PoJYavZFdL8limDbIOTPwkbEqXJ0g
-         nMOmTkF+5RsS5jQAVuendWoZcW2HDD1bT8RZME5GdpxMDvljtfQS709BdAlLuzE5
-         W7PFGhKr8pgzwhhd4W6DUb1UqUsC/egWkXCw7khgdwsUX/vHK5WeIinGyD10B+Kt
-         9I+TKUuyvhdldzdArqdQKFMK2PYLJLHiNU0R5kqiM/joBZYwjjNz+4kRFoc/CS7A
-         2binzz6QVYZ+F+GXSGeUnoBxIchWghrmVnLckIBGq2GThoHoLzj0vSq2x2OYMS7b
-         9Duumathd0QTDOpqmXxguRkCAwEAAaNTMFEwHQYDVR0OBBYEFHNd9zKL4d+yM+we
-         yqIVag9T6xS9MB8GA1UdIwQYMBaAFHNd9zKL4d+yM+weyqIVag9T6xS9MA8GA1Ud
-         EwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAM5g1Cdj1MfZDAv447ROmAfw
-         ts9Jx5qiE4vwP8mGBvumkHJNbeDLtWA5HQtmxfOms0BPu0LfVLG0Ci9V/zErSkg/
-         TwazpgPMy9NBEVXgTnCwX/aaaKqs7DikA3f7pJOWfs1Mh/F6GNFR9TKXq5HYc2N0
-         kEbhpC3iWdwCxqrpa7lDUvJ/GCRPT8j65a6ZbfYloemjd6QflCRN9EvjFMLYd7oJ
-         T9kLq09OvFeyuzcE0HpZIu++D4zOmjsNdcaktmXuVZEWTRQOcmX24V9AhQY46rju
-         31q/xjpkyW8r0CmAGdBAVY2ILKXtqe9LMlvqOKhzkU8ct9DwYLKH30lcFhhaQps=`
-      ],
-      force_authn: false,
-      sign_get_request: true,
-      allow_unencrypted_assertion: true,
-      entity_id: config.spid.node_host
-    }
   };
 }
 

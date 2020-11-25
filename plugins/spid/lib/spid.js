@@ -13,7 +13,7 @@ class ServiceProvider {
     this.options = options;
   }
 
-  genersate_metadata() {
+  generate_metadata() {
     const options = this.options.sp;
 
     if (!options.certificate) {
